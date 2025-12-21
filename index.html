@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="img/favicon.png">
+    <title>Prisma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka&display=swap" rel="stylesheet">
+
+    <style>
+        /* 1. DEFINICIÓN DE VARIABLES DE COLOR */
+        :root {
+            --color-acento: #1ec8c5;
+            /* Turquesa vibrante */
+            --color-fondo: #0f172a;
+            /* Un azul pizarra muy oscuro (slate-900) */
+            --color-tarjeta: #1e293b;
+            /* Un tono más claro para las tarjetas (slate-800) */
+            --color-texto: #f8fafc;
+            /* Blanco azulado muy limpio */
+            --color-texto-tarjeta: #94a3b8;
+            /* Gris suave para descripciones */
+            --color-borde-tarjeta: #334155;
+            /* Bordes sutiles */
+        }
+
+        /* 2. APLICACIÓN DE VARIABLES A LOS ESTILOS GLOBALMENTE */
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: var(--color-fondo);
+            /* Usando variable */
+            color: var(--color-texto);
+            /* Usando variable */
+        }
+
+        /* Para usar una fuente monoespaciada en títulos específicos */
+        .font-code {
+            font-family: 'Space Mono', ui-monospace, SFMono-Regular, monospace;
+        }
+
+        .font-prisma {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Sobrescribir las clases de Tailwind con las variables (para el color de acento) */
+        .text-acento {
+            color: var(--color-acento);
+        }
+
+        .hover-acento:hover {
+            color: var(--color-acento);
+        }
+
+        .bg-tarjeta {
+            background-color: var(--color-tarjeta);
+        }
+
+        .border-tarjeta {
+            border-color: var(--color-borde-tarjeta);
+        }
+
+        .border-tarjeta:hover {
+            border-color: var(--color-acento);
+        }
+
+        .text-tarjeta {
+            color: var(--color-texto-tarjeta);
+        }
+
+        .card-guia {
+            border-left: 4px solid var(--color-acento);
+            background-color: rgba(30, 200, 197, 0.1);
+        }
+
+        .puntos-badge {
+            background: var(--color-acento);
+            color: var(--color-fondo);
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        /* Ajusta el grid para 31 columnas (1 letra + 30 colores) */
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(31, 1fr);
+            gap: 0.5rem;
+        }
+
+        /* Marco para 3 puntos (el centro) */
+        .score-3 {
+            outline: 4px solid #ffffff !important;
+            outline-offset: -2px;
+            z-index: 30;
+        }
+
+        /* Marco para 2 puntos (cuadrado 3x3) */
+        .score-zone-2 {
+            border: 3px solid rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+            z-index: 25;
+        }
+
+        /* Marco para 1 punto (cuadrado 5x5) */
+        .score-zone-1 {
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        /* Estilo para las celdas que son etiquetas */
+        .cell-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: bold;
+            color: var(--color-texto-tarjeta);
+            aspect-ratio: 1 / 1;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen antialiased">
+    <header class="bg-gray-900 shadow-md p-4 border-b border-gray-800 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center py-0">
+            <div class="flex items-center space-x-2">
+                <img src="img/favicon.png" alt="Icono Tres Pistas" class="h-8 w-8">
+                <h1 class="text-3xl font-extrabold text-acento font-prisma">
+                    Prisma
+                </h1>
+            </div>
+
+            <button id="reset-game-btn"
+                class="py-2 px-4 bg-gray-700 hover:bg-gray-600 text-red-400 font-bold rounded-lg transition duration-150 items-center justify-center text-base disabled:opacity-50 hidden"
+                title="Acabar Partida">
+                🛑 Salir
+            </button>
+        </div>
+    </header>
+    <div id="start-buttons">
+        <div class="py-8 md:py-12">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+
+                <h1 class="text-5xl md:text-6xl font-extrabold mb-4">
+                    ¡Demuestra quién es el <span class="font-prisma text-acento">mejor!</span>
+                </h1>
+                <p class="text-xl text-tarjeta mb-12 max-w-2xl mx-auto">
+                    Tres rondas, un mazo y solo una oportunidad para que tu equipo llegue a la cima. ¿Estáis preparados?
+                </p>
+            </div>
+
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                    <div
+                        class="bg-tarjeta p-6 rounded-lg shadow-xl border border-tarjeta transition duration-300 h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-4">
+                                <span class="text-acento text-4xl block">⚙️</span>
+                                <h3 class="text-4xl font-bold">Opciones</h3>
+                            </div>
+                            <p class="text-tarjeta text-base">
+                            <div class="flex flex-col space-y-2 mb-4">
+
+                                <select id="players-select"
+                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                                    <option value="3">3 Jugadores</option>
+                                    <option value="4">4 Jugadores</option>
+                                    <option value="5">5 Jugadores</option>
+                                </select>
+                                <button id="start-btn"
+                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
+                                    Empezar
+                                </button>
+                            </div>
+                            </p>
+                        </div>
+                        <a href="#" target="_blank" class="block">
+                            <span class="mt-5 inline-block text-sm font-medium text-acento hover:underline">Ver
+                                Instrucciones →</span></a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <main class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+
+        <div id="game-layout" class="flex flex-col lg:flex-row lg:space-x-8 ">
+
+            <div id="control-bar-wrapper"
+                class="flex flex-col sm:flex-row lg:flex-col justify-between items-center w-full lg:w-64 mb-6 lg:mb-0">
+                <div id="game-stats" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-3 w-full hidden">
+
+                </div>
+
+                <div id="turn-indicator"
+                    class="w-full bg-gray-800 border-l-4 border-acento p-4 mb-6 rounded-r-lg hidden">
+                    <p class="text-lg">
+                        <span id="role-badge"
+                            class="bg-acento text-gray-900 px-2 py-0.5 rounded font-bold mr-2 text-sm uppercase">Guía</span>
+                        <span id="turn-message" class="font-medium">Esperando...</span>
+                    </p>
+                </div>
+
+            </div>
+            <!--
+            <div class="flex-1 flex flex-col items-center w-full">
+                <div id="game-board" class="grid w-full bg-gray-800 p-2 rounded shadow-2xl flex-1"></div>
+            </div>-->
+
+
+            <!--<div id="game-board" class="grid gap-0.5 w-full lg:flex-1 bg-gray-800 p-1 rounded shadow-2xl">-->
+            <div id="game-board" class="grid gap-0.5 w-full lg:flex-1 bg-gray-800 p-1 rounded shadow-2xl">
+
+            </div>
+        </div>
+
+        </div>
+    </main>
+
+    <footer class="bg-gray-900 border-t border-gray-800 mt-16 py-4">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-center text-center md:text-left">
+
+                <p class="text-xs text-tarjeta mb-4 md:mb-0">
+                    &copy; <span id="currentYearFooter"></span> <span class="font-code">
+                        Da_CaRo
+                    </span>
+                </p>
+
+                <div class="flex space-x-6 items-center">
+                    <a href="https://da-caro.github.io/labs" target="_blank"
+                        class="text-tarjeta hover-acento transition duration-300 text-sm">
+                        Labs
+                    </a>
+                    <a href="https://github.com/da-caro" target="_blank"
+                        class="text-tarjeta hover-acento transition duration-300 text-sm">
+                        GitHub
+                    </a>
+                    <button id="clear-storage-btn" class="text-tarjeta hover-acento transition duration-300 text-sm">
+                        Borrar Variables
+                    </button>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="guide-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div
+            class="bg-gray-800 p-8 rounded-2xl max-w-sm w-full text-center border-2 border-acento shadow-[0_0_20px_rgba(30,200,197,0.3)]">
+            <h2 class="text-2xl font-prisma text-acento mb-4">Tu Color Secreto</h2>
+            <div id="target-preview" class="w-32 h-32 mx-auto rounded-lg shadow-inner mb-6 border-4 border-white/20">
+            </div>
+            <p class="text-sm text-tarjeta mb-6">Memoriza este tono y da tu pista de <b>una palabra</b>.</p>
+            <button id="close-modal-btn"
+                class="w-full py-3 bg-acento text-gray-900 font-bold rounded-xl hover:bg-opacity-90 transition font-prisma">
+                ¡ENTENDIDO!
+            </button>
+        </div>
+    </div>
+    <script type="module">
+        document.getElementById('currentYearFooter').textContent = new Date().getFullYear();
+
+        let listaJugadores = [];
+        let indiceGuiaActual = 0;
+        let jugadorActualVotando = -1;
+        let votosRealizados = 0;
+        let rondaActual = 1;
+        const MAX_RONDAS = 3;
+        let colorObjetivo = null;
+        const letras = "ABCDEFGHIJKLMNOP".split(""); // 16 letras para 16 filas
+
+        // Configuración del tablero (Estilo Hues and Clues: 30x16 = 480 colores)
+        const columns = 30;
+        const rows = 16;
+
+        const board = document.getElementById('game-board');
+
+
+
+        function generateBoard() {
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+
+            // 1. Configurar el grid: 31 columnas (1 para letra + 30 de colores)
+            board.style.gridTemplateColumns = `repeat(31, 1fr)`;
+
+            // --- FILA 0: Números ---
+            // Celda esquina superior izquierda (vacía)
+            const corner = document.createElement('div');
+            board.appendChild(corner);
+
+            for (let c = 1; c <= 30; c++) {
+                const numCell = document.createElement('div');
+                numCell.className = 'cell-label';
+                numCell.textContent = c;
+                board.appendChild(numCell);
+            }
+
+            // --- FILAS A-P ---
+            for (let r = 0; r < rows; r++) {
+                // A. Celda de Letra (Columna 0 de la fila)
+                const letterCell = document.createElement('div');
+                letterCell.className = 'cell-label';
+                letterCell.textContent = letras[r];
+                board.appendChild(letterCell);
+
+                // B. Celdas de Colores (Columnas 1-30)
+                for (let c = 0; c < columns; c++) {
+                    const cell = document.createElement('div');
+                    const h = (c / columns) * 360;
+                    const l = 100 - ((r / (rows - 1)) * 80 + 10);
+                    const color = `hsl(${h}, 70%, ${l}%)`;
+
+                    cell.style.backgroundColor = color;
+                    cell.className = 'aspect-square w-full cursor-pointer hover:scale-110 hover:z-10 transition-transform duration-100 rounded-sm shadow-sm';
+
+                    // Pasamos r y c originales para no romper la lógica de puntuación
+                    cell.addEventListener('click', () => manejarClicCelda(r, c, cell));
+                    board.appendChild(cell);
+                }
+            }
+        }
+
+        function highlightSelection(element) {
+            // Quitar borde a otros
+            document.querySelectorAll('#game-board div').forEach(el => el.style.outline = 'none');
+            // Poner borde al seleccionado
+            element.style.outline = '3px solid white';
+            element.style.outlineOffset = '-3px';
+        }
+
+
+        // --- Lógica del Juego ---
+
+        /**
+         * Calcula los puntos basándose en la distancia (Manhattan o Euclidiana)
+         * @param {number} fCapa - Fila donde hizo clic el jugador
+         * @param {number} cCapa - Columna donde hizo clic el jugador
+         */
+        function calcularPuntuacion(fClic, cClic) {
+            if (!colorObjetivo) return;
+
+            // Calculamos la distancia de celdas
+            const distanciaFila = Math.abs(fClic - colorObjetivo.fila);
+            const distanciaCol = Math.abs(cClic - colorObjetivo.columna);
+
+            // Determinamos los puntos (Reglas oficiales de Hues and Clues):
+            // Dentro del cuadrado 3x3 que rodea al color: 3-2 puntos.
+            // En el centro exacto: 3 puntos.
+            // En los bordes del cuadrado 3x3: 2 puntos.
+            // En el borde exterior del cuadrado 5x5: 1 punto.
+
+            let puntos = 0;
+            const maxDist = Math.max(distanciaFila, distanciaCol);
+
+            if (maxDist === 0) puntos = 3;      // ¡Centro exacto!
+            else if (maxDist === 1) puntos = 2; // Alrededor (3x3)
+            else if (maxDist === 2) puntos = 1; // Un poco más lejos (5x5)
+
+            return puntos;
+        }
+
+        // --- Integración con los clics ---
+
+        // Botón de inicio
+        // Configurar jugadores al empezar
+        document.getElementById('start-btn').addEventListener('click', () => {
+            const numPlayers = parseInt(document.getElementById('players-select').value);
+            listaJugadores = Array.from({ length: numPlayers }, (_, i) => ({
+                id: i,
+                nombre: `Jugador ${i + 1}`,
+                puntos: 0
+            }));
+
+            document.getElementById('start-buttons').classList.add('hidden');
+            document.getElementById('turn-indicator').classList.remove('hidden');
+            document.getElementById('game-stats').classList.remove('hidden');
+
+            // 1. Generar tablero primero
+            generateBoard();
+            // 3. Iniciar la ronda
+            iniciarRonda();
+        });
+
+
+        const guideModal = document.getElementById('guide-modal');
+        const targetPreview = document.getElementById('target-preview');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // Función mejorada para seleccionar el color
+        function seleccionarColorSecreto() {
+            // Generar posición lógica (0-15 y 0-29)
+            const rAleatoria = Math.floor(Math.random() * rows);
+            const cAleatoria = Math.floor(Math.random() * columns);
+
+            const h = (cAleatoria / columns) * 360;
+            const l = 100 - ((rAleatoria / (rows - 1)) * 80 + 10);
+            const colorHsl = `hsl(${h}, 70%, ${l}%)`;
+
+            // El texto para el guía (Letra A-P y Número 1-30)
+            const coordenadaTexto = `${letras[rAleatoria]}${cAleatoria + 1}`;
+
+            colorObjetivo = {
+                fila: rAleatoria,
+                columna: cAleatoria,
+                hsl: colorHsl,
+                coordenada: coordenadaTexto
+            };
+
+            // Actualizar Modal
+            targetPreview.style.backgroundColor = colorHsl;
+            document.querySelector('#guide-modal p').innerHTML =
+                `Tu color está en: <b class="text-acento text-xl">${coordenadaTexto}</b><br>Memoriza el tono y da tu pista.`;
+
+            guideModal.classList.remove('hidden');
+        }
+
+        // Función para mostrar la respuesta correcta en el tablero
+        function revelarObjetivo() {
+            const todasLasCeldas = document.querySelectorAll('#game-board > div');
+
+            // Función auxiliar para obtener el elemento del DOM basado en coordenadas lógicas
+            const getCell = (f, c) => {
+                if (f < 0 || f >= rows || c < 0 || c >= columns) return null;
+                // (f + 1) para saltar fila de números, (c + 1) para saltar columna de letras
+                const idx = ((f + 1) * 31) + (c + 1);
+                return todasLasCeldas[idx];
+            };
+
+            // 1. Marcar el centro (3 puntos)
+            const centro = getCell(colorObjetivo.fila, colorObjetivo.columna);
+            if (centro) {
+                centro.classList.add('score-3');
+                centro.animate([
+                    { transform: 'scale(1)', boxShadow: '0 0 0px white' },
+                    { transform: 'scale(1.3)', boxShadow: '0 0 15px white' }
+                ], { duration: 500, fill: 'forwards' });
+            }
+
+            // 2. Marcar zonas de 2 y 1 punto
+            // Recorremos un área de 5x5 alrededor del centro
+            for (let fOffset = -2; fOffset <= 2; fOffset++) {
+                for (let cOffset = -2; cOffset <= 2; cOffset++) {
+                    const f = colorObjetivo.fila + fOffset;
+                    const c = colorObjetivo.columna + cOffset;
+                    const cell = getCell(f, c);
+
+                    if (cell) {
+                        const maxDist = Math.max(Math.abs(fOffset), Math.abs(cOffset));
+
+                        if (maxDist === 1) {
+                            // Zona de 2 puntos (anillo inmediato)
+                            cell.classList.add('score-zone-2');
+                        } else if (maxDist === 2) {
+                            // Zona de 1 punto (anillo exterior)
+                            cell.classList.add('score-zone-1');
+                        }
+                    }
+                }
+            }
+
+            // Mostrar mensaje con la coordenada final
+            document.getElementById('turn-message').innerHTML =
+                `¡Revelado! El color era <b class="text-white">${colorObjetivo.coordenada}</b>`;
+        }
+
+        function iniciarRonda() {
+            votosRealizados = 0;
+            // El primer adivinador es el siguiente después del guía
+            jugadorActualVotando = (indiceGuiaActual + 1) % listaJugadores.length;
+
+            const guia = listaJugadores[indiceGuiaActual];
+            document.getElementById('turn-message').textContent = `Guía: ${guia.nombre}. Esperando pista...`;
+
+            actualizarMarcador();
+            seleccionarColorSecreto(); // Abre el modal para el guía
+        }
+
+        function procesarVoto(fila, columna) {
+            // Si el guía intenta votar, lo ignoramos (opcional)
+            // if (votoDeGuia) return;
+
+            const puntos = calcularPuntuacion(fila, columna);
+            votosRealizados++;
+
+            // Aquí podrías guardar los puntos del jugador actual
+            // listaJugadores[jugadorQueVoto].puntos += puntos;
+
+            if (votosRealizados === listaJugadores.length - 1) {
+                finalizarTurno();
+            } else {
+                document.getElementById('turn-message').textContent = `Votos: ${votosRealizados}/${listaJugadores.length - 1}. ¡Siguiente jugador!`;
+            }
+        }
+        function finalizarTurno() {
+            revelarObjetivo(); // Muestra el marco blanco en el color real
+            document.getElementById('turn-message').textContent = "¡Ronda completada!";
+
+            setTimeout(() => {
+                if (confirm("¿Pasar al siguiente turno?")) {
+                    prepararSiguienteTurno();
+                }
+            }, 1500);
+        }
+
+        function prepararSiguienteTurno() {
+            generateBoard(); // Limpia el tablero
+            indiceGuiaActual = (indiceGuiaActual + 1) % listaJugadores.length;
+
+            if (indiceGuiaActual === 0) rondaActual++;
+
+            if (rondaActual <= MAX_RONDAS) {
+                iniciarRonda();
+            } else {
+                alert("Fin de la partida. ¡Revisa el marcador final!");
+            }
+        }
+
+        /**
+        * Modifica tu función de clic en la celda para incluir esto:
+        */
+        function manejarClicCelda(fila, columna, elemento) {
+            if (votosRealizados >= listaJugadores.length - 1) return;
+
+            const puntos = calcularPuntuacion(fila, columna);
+            listaJugadores[jugadorActualVotando].puntos += puntos;
+
+            // Usamos directamente el 'elemento' que viene del evento click
+            elemento.style.outline = '3px solid rgba(255,255,255,0.8)';
+            elemento.style.outlineOffset = '-3px';
+
+            votosRealizados++;
+
+            // 4. Pasar al siguiente jugador (saltando al guía)
+            do {
+                jugadorActualVotando = (jugadorActualVotando + 1) % listaJugadores.length;
+            } while (jugadorActualVotando === indiceGuiaActual && votosRealizados < listaJugadores.length - 1);
+
+            actualizarMarcador();
+
+            // 5. ¿Han votado todos?
+            if (votosRealizados === listaJugadores.length - 1) {
+                finalizarTurno();
+            } else {
+                document.getElementById('turn-message').textContent = `Turno de: ${listaJugadores[jugadorActualVotando].nombre}`;
+            }
+        }
+
+        /**
+        * Crea las tarjetas de los jugadores en el lateral
+        */
+        function actualizarMarcador() {
+            const statsContainer = document.getElementById('game-stats');
+            statsContainer.innerHTML = '<h2 class="text-xl font-prisma text-acento mb-2 hidden lg:block">Puntuación</h2>';
+
+            listaJugadores.forEach((jugador, index) => {
+                const esGuia = index === indiceGuiaActual;
+
+                const card = document.createElement('div');
+                card.className = `bg-tarjeta p-3 rounded-lg border border-gray-700 flex justify-between items-center transition-all ${esGuia ? 'card-guia' : ''}`;
+
+                card.innerHTML = `
+            <div class="flex flex-col">
+                <span class="text-xs uppercase font-bold ${esGuia ? 'text-acento' : 'text-gray-500'}">
+                    ${esGuia ? '🎨 Guía' : '🔍 Adivinando'}
+                </span>
+                <span class="font-prisma text-lg">${jugador.nombre} ${index === jugadorActualVotando ? '←' : ''}</span>
+            </div>
+            <div class="puntos-badge px-3 py-1 rounded-full font-bold text-xl">
+                ${jugador.puntos}
+            </div>
+        `;
+                statsContainer.appendChild(card);
+            });
+        }
+
+        // Evento para cerrar el modal
+        closeModalBtn.addEventListener('click', () => {
+            guideModal.classList.add('hidden');
+        });
+    </script>
+
+</body>
+
+</html>
