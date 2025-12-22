@@ -195,6 +195,19 @@
         #reveal-btn {
             animation: pulse-acento 2s infinite;
         }
+
+        #players-list-display {
+            transition: all 0.3s ease;
+            min-height: 50px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Evita que los eventos de ratón interfieran con el texto del badge durante el drag */
+        #players-list-display div span {
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -243,7 +256,8 @@
                     Sintoniza tu percepción en el <span class="font-prisma text-prisma">espectro</span>
                 </h1>
                 <p class="text-xl text-tarjeta mb-12 max-w-2xl mx-auto">
-                    Encuentra el tono exacto. Tres rondas para demostrar que tus ojos ven lo que otros ignoran. ¿Lograrás dar en el centro?
+                    Encuentra el tono exacto. Tres rondas para demostrar que tus ojos ven lo que otros ignoran.
+                    ¿Lograrás dar en el centro?
                 </p>
             </div>
 
@@ -259,21 +273,26 @@
                             </div>
                             <p class="text-tarjeta text-base">
                             <div class="flex flex-col space-y-2 mb-4">
+                                <label
+                                    class="text-sm font-bold text-tarjeta uppercase tracking-widest text-center">Configurar
+                                    Jugadores</label>
 
-                                <select id="players-select"
-                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                                    <option value="3">3 Jugadores</option>
-                                    <option value="4">4 Jugadores</option>
-                                    <option value="5">5 Jugadores</option>
-                                    <option value="6">6 Jugadores</option>
-                                    <option value="7">7 Jugadores</option>
-                                    <option value="8">8 Jugadores</option>
-                                    <option value="9">9 Jugadores</option>
-                                    <option value="10">10 Jugadores</option>
-                                </select>
-                                <button id="start-btn"
-                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                                    Empezar
+                                <div class="flex space-x-2">
+                                    <input type="text" id="player-name-input" placeholder="Nombre del jugador..."
+                                        class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-acento">
+                                    <button id="add-player-btn"
+                                        class="bg-gray-600 hover:bg-acento text-white px-4 py-2 rounded-lg transition duration-300">
+                                        Añadir
+                                    </button>
+                                </div>
+
+                                <div id="players-list-display"
+                                    class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-900/50 rounded-lg border border-dashed border-gray-700">
+                                </div>
+
+                                <button id="start-btn" disabled
+                                    class="bg-acento opacity-50 cursor-not-allowed text-gray-900 font-black py-3 px-4 rounded-xl transition duration-300 shadow-lg uppercase tracking-tighter">
+                                    Empezar (mín. 3)
                                 </button>
                             </div>
                             </p>
@@ -487,22 +506,25 @@
         ];
 
         document.getElementById('start-btn').addEventListener('click', () => {
-            const numPlayers = parseInt(document.getElementById('players-select').value);
+            /*const numPlayers = parseInt(document.getElementById('players-select').value);
             listaJugadores = Array.from({ length: numPlayers }, (_, i) => ({
                 id: i,
                 nombre: coloresJugadores[i].nombre,
                 color: coloresJugadores[i].hex,
                 puntos: 0
-            }));
+            }));*/
 
-            guardarPartida()
+            listaJugadores = [...jugadoresTemporales];
+
 
             document.getElementById('start-buttons').classList.add('hidden');
             document.getElementById('game-stats').classList.remove('hidden');
+            document.getElementById('reset-game-btn').classList.remove('hidden');
 
             generateBoard();
             iniciarRonda();
             actualizarProgresoNav();
+            guardarPartida()
         });
 
 
@@ -1026,6 +1048,7 @@
         document.getElementById('clear-storage-btn').addEventListener('click', () => {
             if (confirm("¿Seguro que quieres borrar todo el progreso?")) {
                 localStorage.removeItem('prisma_game_state');
+                localStorage.removeItem('prisma_nombres_recientes');
                 location.reload(); // Recarga la página para volver al inicio
             }
         });
@@ -1038,6 +1061,142 @@
             }
         };
 
+
+        let jugadoresTemporales = [];
+
+        function actualizarVistaPreviaJugadores() {
+            const container = document.getElementById('players-list-display');
+            const startBtn = document.getElementById('start-btn');
+            container.innerHTML = '';
+
+            jugadoresTemporales.forEach((jugador, index) => {
+                const badge = document.createElement('div');
+                badge.draggable = true;
+                // Añadimos clases para feedback visual de clic
+                badge.className = 'flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-black cursor-pointer hover:brightness-110 active:scale-95 transition-all duration-200 shadow-sm select-none';
+                badge.style.backgroundColor = jugador.color;
+                badge.style.color = '#0f172a';
+
+                // El contenido ahora separa el área de nombre (clic para color) de la X (eliminar)
+                badge.innerHTML = `
+            <span class="flex-1">${jugador.nombre}</span>
+            <span class="ml-2 opacity-30 hover:opacity-100 transition-opacity text-lg" onclick="event.stopPropagation(); eliminarJugadorTemporal(${index})">×</span>
+        `;
+
+                // --- CAMBIO DE COLOR AL HACER CLIC ---
+                badge.onclick = () => {
+                    // 1. Buscamos el índice actual del color
+                    let colorIndex = coloresJugadores.findIndex(c => c.hex === jugador.color);
+
+                    // 2. Rotamos al siguiente color
+                    colorIndex = (colorIndex + 1) % coloresJugadores.length;
+
+                    // 3. Aplicamos el cambio al objeto
+                    jugador.color = coloresJugadores[colorIndex].hex;
+
+                    // 4. RE-DIBUJAMOS la vista previa
+                    actualizarVistaPreviaJugadores();
+
+                    // 5. ¡ESTA ES LA CLAVE! Guardamos la lista actualizada en el localStorage
+                    guardarNombresTemporales();
+                };
+
+                // --- Lógica de Arrastre ---
+                badge.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                    badge.style.opacity = '0.5';
+                });
+
+                badge.addEventListener('dragend', () => {
+                    badge.style.opacity = '1';
+                });
+
+                badge.addEventListener('dragover', (e) => {
+                    e.preventDefault(); // Permite soltar
+                    badge.classList.add('scale-110', 'mx-2');
+                });
+
+                badge.addEventListener('dragleave', () => {
+                    badge.classList.remove('scale-110', 'mx-2');
+                });
+
+                badge.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIndex = e.dataTransfer.getData('text/plain');
+                    const toIndex = index;
+
+                    // Reordenar el array
+                    const movedItem = jugadoresTemporales.splice(fromIndex, 1)[0];
+                    jugadoresTemporales.splice(toIndex, 0, movedItem);
+
+                    actualizarVistaPreviaJugadores();
+                });
+
+                container.appendChild(badge);
+            });
+
+            // Validación del botón de inicio
+            if (jugadoresTemporales.length >= 3 && jugadoresTemporales.length <= 10) {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Función global para que el botón de la X funcione
+        // Actualiza tu función de eliminar
+        window.eliminarJugadorTemporal = (index) => {
+            jugadoresTemporales.splice(index, 1);
+            actualizarVistaPreviaJugadores();
+            guardarNombresTemporales(); // <--- GUARDAR AQUÍ
+        };
+
+        // Actualiza tu botón de añadir
+        document.getElementById('add-player-btn').onclick = () => {
+            const input = document.getElementById('player-name-input');
+            const nombre = input.value.trim();
+
+            if (nombre && jugadoresTemporales.length < 10) {
+                const colorAsignado = coloresJugadores[jugadoresTemporales.length % coloresJugadores.length].hex;
+
+                jugadoresTemporales.push({
+                    id: Date.now(), // Usamos timestamp para ID único
+                    nombre: nombre,
+                    color: colorAsignado,
+                    puntos: 0
+                });
+
+                input.value = '';
+                actualizarVistaPreviaJugadores();
+                guardarNombresTemporales(); // <--- GUARDAR AQUÍ
+            }
+        };
+
+        // Permitir añadir pulsando "Enter"
+        document.getElementById('player-name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('add-player-btn').click();
+        });
+
+        // Función auxiliar para persistir solo los nombres y colores elegidos
+        function guardarNombresTemporales() {
+            localStorage.setItem('prisma_nombres_recientes', JSON.stringify(jugadoresTemporales));
+        }
+
+        function cargarNombresRecientes() {
+            // Si NO hay una partida en curso, cargamos la lista previa
+            if (!localStorage.getItem('prisma_game_state')) {
+                const guardados = localStorage.getItem('prisma_nombres_recientes');
+                if (guardados) {
+                    jugadoresTemporales = JSON.parse(guardados);
+                    actualizarVistaPreviaJugadores();
+                }
+            }
+        }
+
+        // Ejecutar al cargar
+        cargarNombresRecientes();
 
     </script>
 
