@@ -204,11 +204,6 @@
             flex-wrap: wrap;
             align-items: center;
         }
-
-        /* Evita que los eventos de ratón interfieran con el texto del badge durante el drag */
-        #players-list-display div span {
-            pointer-events: none;
-        }
     </style>
 </head>
 
@@ -287,10 +282,6 @@
                                     </button>
                                 </div>
 
-                                <div id="players-list-display"
-                                    class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-900/50 rounded-lg border border-dashed border-gray-700">
-                                </div>
-
                                 <button id="start-btn" disabled
                                     class="bg-acento opacity-50 cursor-not-allowed text-gray-900 font-black py-3 px-4 rounded-xl transition duration-300 shadow-lg uppercase tracking-tighter">
                                     Empezar (mín. 3)
@@ -301,6 +292,25 @@
                         <a href="#" target="_blank" class="block">
                             <span class="mt-5 inline-block text-sm font-medium text-prisma hover:underline">Ver
                                 Instrucciones →</span></a>
+                    </div>
+
+                    <div
+                        class="bg-tarjeta p-6 rounded-lg shadow-xl border border-tarjeta transition duration-300 h-full flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-4">
+                                <span class="text-prisma text-4xl block">⚙️</span>
+                                <h3 class="text-4xl font-bold">Jugadores</h3>
+                            </div>
+                            <p class="text-tarjeta text-base">
+                            <div class="flex flex-col space-y-2 mb-4">
+
+                                <div id="players-list-display"
+                                    class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-900/50 rounded-lg border border-dashed border-gray-700">
+                                </div>
+
+                            </div>
+                            </p>
+                        </div>
                     </div>
 
                 </div>
@@ -1072,38 +1082,55 @@
 
             jugadoresTemporales.forEach((jugador, index) => {
                 const badge = document.createElement('div');
+                // El contenedor entero es el que se mueve
                 badge.draggable = true;
-                // Añadimos clases para feedback visual de clic
-                badge.className = 'flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-black cursor-pointer hover:brightness-110 active:scale-95 transition-all duration-200 shadow-sm select-none';
+                badge.className = 'flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-black transition-all duration-200 shadow-sm select-none';
                 badge.style.backgroundColor = jugador.color;
                 badge.style.color = '#0f172a';
 
-                // El contenido ahora separa el área de nombre (clic para color) de la X (eliminar)
                 badge.innerHTML = `
-            <span class="flex-1">${jugador.nombre}</span>
-            <span class="ml-2 opacity-30 hover:opacity-100 transition-opacity text-lg" onclick="event.stopPropagation(); eliminarJugadorTemporal(${index})">×</span>
+            <span class="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 px-1 text-lg drag-handle">⋮⋮</span>
+            
+            <span class="flex-1 py-1 cursor-pointer hover:underline name-zone px-1" draggable="false">${jugador.nombre}</span>
+            
+            <button class="opacity-40 hover:opacity-100 hover:text-white transition-opacity text-xl px-2 cursor-pointer delete-btn" 
+                    type="button" style="background:none; border:none; color:inherit; font-weight:bold;">×</button>
         `;
 
-                // --- CAMBIO DE COLOR AL HACER CLIC ---
-                badge.onclick = () => {
-                    // 1. Buscamos el índice actual del color
+                const zonaNombre = badge.querySelector('.name-zone');
+                const btnEliminar = badge.querySelector('.delete-btn');
+
+                // --- 1. LÓGICA DE COLOR (Ahora funciona siempre) ---
+                zonaNombre.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
                     let colorIndex = coloresJugadores.findIndex(c => c.hex === jugador.color);
-
-                    // 2. Rotamos al siguiente color
                     colorIndex = (colorIndex + 1) % coloresJugadores.length;
-
-                    // 3. Aplicamos el cambio al objeto
                     jugador.color = coloresJugadores[colorIndex].hex;
 
-                    // 4. RE-DIBUJAMOS la vista previa
-                    actualizarVistaPreviaJugadores();
-
-                    // 5. ¡ESTA ES LA CLAVE! Guardamos la lista actualizada en el localStorage
+                    // Actualización visual inmediata
+                    badge.style.backgroundColor = jugador.color;
                     guardarNombresTemporales();
                 };
 
-                // --- Lógica de Arrastre ---
+                // --- 2. LÓGICA DE ELIMINAR ---
+                btnEliminar.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.eliminarJugadorTemporal(index);
+                };
+
+                // --- 3. LÓGICA DE ARRASTRE ---
                 badge.addEventListener('dragstart', (e) => {
+                    // Si el usuario pincha en el nombre o en el botón eliminar, CANCELAMOS el drag
+                    // para permitir que el evento 'onclick' del color funcione.
+                    if (e.target.classList.contains('name-zone') || e.target.closest('.delete-btn')) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    // Solo permitimos arrastrar si se agarra desde el badge o el handle
                     e.dataTransfer.setData('text/plain', index);
                     badge.style.opacity = '0.5';
                 });
@@ -1113,24 +1140,24 @@
                 });
 
                 badge.addEventListener('dragover', (e) => {
-                    e.preventDefault(); // Permite soltar
-                    badge.classList.add('scale-110', 'mx-2');
+                    e.preventDefault();
+                    badge.classList.add('scale-105', 'ring-2', 'ring-white/20');
                 });
 
                 badge.addEventListener('dragleave', () => {
-                    badge.classList.remove('scale-110', 'mx-2');
+                    badge.classList.remove('scale-105', 'ring-2', 'ring-white/20');
                 });
 
                 badge.addEventListener('drop', (e) => {
                     e.preventDefault();
                     const fromIndex = e.dataTransfer.getData('text/plain');
                     const toIndex = index;
-
-                    // Reordenar el array
-                    const movedItem = jugadoresTemporales.splice(fromIndex, 1)[0];
-                    jugadoresTemporales.splice(toIndex, 0, movedItem);
-
-                    actualizarVistaPreviaJugadores();
+                    if (fromIndex !== "" && fromIndex !== toIndex.toString()) {
+                        const movedItem = jugadoresTemporales.splice(fromIndex, 1)[0];
+                        jugadoresTemporales.splice(toIndex, 0, movedItem);
+                        actualizarVistaPreviaJugadores();
+                        guardarNombresTemporales();
+                    }
                 });
 
                 container.appendChild(badge);
@@ -1146,13 +1173,13 @@
             }
         }
 
-        // Función global para que el botón de la X funcione
-        // Actualiza tu función de eliminar
-        window.eliminarJugadorTemporal = (index) => {
+        function eliminarJugadorTemporal(index) {
             jugadoresTemporales.splice(index, 1);
             actualizarVistaPreviaJugadores();
-            guardarNombresTemporales(); // <--- GUARDAR AQUÍ
-        };
+            guardarNombresTemporales();
+        }
+
+        window.eliminarJugadorTemporal = eliminarJugadorTemporal;
 
         // Actualiza tu botón de añadir
         document.getElementById('add-player-btn').onclick = () => {
