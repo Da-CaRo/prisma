@@ -495,6 +495,8 @@
                 puntos: 0
             }));
 
+            guardarPartida()
+
             document.getElementById('start-buttons').classList.add('hidden');
             document.getElementById('game-stats').classList.remove('hidden');
 
@@ -573,6 +575,7 @@
             </button>
         </div>
     `;
+            guardarPartida()
 
             document.getElementById('close-privacy-btn').onclick = () => {
                 guideModal.classList.add('hidden');
@@ -682,6 +685,8 @@
             revelarObjetivo();
             actualizarMarcador();
 
+            guardarPartida()
+
             const actionButtons = document.getElementById('action-buttons');
             if (actionButtons) {
                 actionButtons.innerHTML = `
@@ -716,7 +721,11 @@
                 el.innerHTML = "";
             });
 
+
+
             tableroBloqueado = false; // Desbloqueamos para la nueva ronda
+
+            guardarPartida()
 
             listaJugadores.forEach(j => delete j.votoActual);
             votosRealizados = 0;
@@ -761,6 +770,8 @@
             }
             elemento.dataset.votos = JSON.stringify(votosNuevos);
             actualizarAparienciaCelda(elemento);
+
+            guardarPartida()
 
             // 3. Verificar si todos han votado al menos una vez
             const adivinadoresQueVotaron = listaJugadores.filter(j => j.votoActual && j.id !== indiceGuiaActual).length;
@@ -948,6 +959,84 @@
                 guideText.textContent = `${guiasCompletados}/${listaJugadores.length}`;
             }
         }
+
+        function guardarPartida() {
+            const estado = {
+                listaJugadores,
+                indiceGuiaActual,
+                jugadorActualVotando,
+                votosRealizados,
+                rondaActual,
+                colorObjetivo,
+                tableroBloqueado
+            };
+            localStorage.setItem('prisma_game_state', JSON.stringify(estado));
+        }
+
+        function cargarPartida() {
+            const datosGuardados = localStorage.getItem('prisma_game_state');
+            if (datosGuardados) {
+                const estado = JSON.parse(datosGuardados);
+
+                // Restaurar variables globales
+                listaJugadores = estado.listaJugadores;
+                indiceGuiaActual = estado.indiceGuiaActual;
+                jugadorActualVotando = estado.jugadorActualVotando;
+                votosRealizados = estado.votosRealizados;
+                rondaActual = estado.rondaActual;
+                colorObjetivo = estado.colorObjetivo;
+                tableroBloqueado = estado.tableroBloqueado;
+
+                // Ajustar interfaz
+                document.getElementById('start-buttons').classList.add('hidden');
+                document.getElementById('game-stats').classList.remove('hidden');
+                document.getElementById('reset-game-btn').classList.remove('hidden');
+
+                generateBoard();
+                actualizarMarcador();
+                actualizarProgresoNav();
+
+                // Si el tablero estaba bloqueado, significa que estábamos en pantalla de resultados
+                if (tableroBloqueado) {
+                    revelarObjetivo();
+                    // Re-renderizar el botón de "Continuar"
+                    finalizarTurno();
+                } else if (votosRealizados === listaJugadores.length - 1 && votosRealizados > 0) {
+                    mostrarBotonRevelar();
+                }
+
+                // Restaurar los votos visualmente en el tablero
+                listaJugadores.forEach(j => {
+                    if (j.votoActual) {
+                        const cell = document.querySelector(`div[data-fila="${j.votoActual.fila}"][data-columna="${j.votoActual.columna}"]`);
+                        if (cell) {
+                            let votos = cell.dataset.votos ? JSON.parse(cell.dataset.votos) : [];
+                            if (!votos.includes(j.id)) votos.push(j.id);
+                            cell.dataset.votos = JSON.stringify(votos);
+                            actualizarAparienciaCelda(cell);
+                        }
+                    }
+                });
+            }
+        }
+
+        // Llamar a cargarPartida justo al final del script para que se ejecute al abrir la web
+        cargarPartida();
+
+        document.getElementById('clear-storage-btn').addEventListener('click', () => {
+            if (confirm("¿Seguro que quieres borrar todo el progreso?")) {
+                localStorage.removeItem('prisma_game_state');
+                location.reload(); // Recarga la página para volver al inicio
+            }
+        });
+
+        // También el botón de "Salir" del header
+        document.getElementById('reset-game-btn').onclick = () => {
+            if (confirm("¿Deseas abandonar la partida actual?")) {
+                localStorage.removeItem('prisma_game_state');
+                location.reload();
+            }
+        };
 
 
     </script>
