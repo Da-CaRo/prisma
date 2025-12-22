@@ -83,13 +83,6 @@
             font-family: 'Fredoka', sans-serif;
         }
 
-        /* Ajusta el grid para 31 columnas (1 letra + 30 colores) */
-        #game-board {
-            display: grid;
-            grid-template-columns: repeat(31, 1fr);
-            gap: 0.2rem;
-        }
-
         /* Marco para 3 puntos */
         .score-3 {
             outline: 3px solid white !important;
@@ -120,6 +113,51 @@
             pointer-events: none;
             /* Para que no se puedan clickar */
         }
+
+        /* Asegura que el contenedor principal no colapse */
+        #game-layout {
+            display: flex;
+            align-items: flex-start;
+            /* Alinea al inicio para que el marcador no estire el layout */
+            width: 100%;
+        }
+
+        #control-bar-wrapper {
+            flex-shrink: 0;
+            width: 12rem;
+            /* Antes era w-64 (16rem), ahora 12rem para ganar espacio */
+            position: sticky;
+            top: 5rem;
+            z-index: 20;
+        }
+
+        /* El tablero se expandirá automáticamente */
+        #game-board {
+            flex-grow: 1;
+            min-width: 0;
+            /* Permite que el flexbox reduzca el tablero si es necesario sin romperlo */
+            /* Mantenemos el aspect-ratio para que las celdas sigan siendo cuadradas */
+            aspect-ratio: 31 / 17;
+        }
+
+        #game-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            /* Espacio mínimo controlado entre las tarjetas */
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        /* Scrollbar estética para el marcador */
+        #game-stats::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #game-stats::-webkit-scrollbar-thumb {
+            background: var(--color-acento);
+            border-radius: 10px;
+        }
     </style>
 </head>
 
@@ -132,6 +170,8 @@
                     Prisma
                 </h1>
             </div>
+
+            <div id="nav-actions" class="flex items-center"></div>
 
             <button id="reset-game-btn"
                 class="py-2 px-4 bg-gray-700 hover:bg-gray-600 text-red-400 font-bold rounded-lg transition duration-150 items-center justify-center text-base disabled:opacity-50 hidden"
@@ -170,6 +210,11 @@
                                     <option value="3">3 Jugadores</option>
                                     <option value="4">4 Jugadores</option>
                                     <option value="5">5 Jugadores</option>
+                                    <option value="6">6 Jugadores</option>
+                                    <option value="7">7 Jugadores</option>
+                                    <option value="8">8 Jugadores</option>
+                                    <option value="9">9 Jugadores</option>
+                                    <option value="10">10 Jugadores</option>
                                 </select>
                                 <button id="start-btn"
                                     class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
@@ -189,21 +234,12 @@
     </div>
     <main class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
 
-        <div id="game-layout" class="flex flex-col lg:flex-row lg:space-x-8 ">
+        <div id="game-layout" class="flex flex-col lg:flex-row lg:space-x-4 items-start">
 
             <div id="control-bar-wrapper"
                 class="flex flex-col sm:flex-row lg:flex-col justify-between items-center w-full lg:w-64 mb-6 lg:mb-0">
                 <div id="game-stats" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 gap-3 w-full hidden">
 
-                </div>
-
-                <div id="turn-indicator"
-                    class="w-full bg-gray-800 border-l-4 border-acento p-4 mb-6 rounded-r-lg hidden">
-                    <p class="text-lg">
-                        <span id="role-badge"
-                            class="bg-acento text-gray-900 px-2 py-0.5 rounded font-bold mr-2 text-sm uppercase">Guía</span>
-                        <span id="turn-message" class="font-medium">Esperando...</span>
-                    </p>
                 </div>
 
             </div>
@@ -379,7 +415,11 @@
             { nombre: 'Verde', hex: '#22c55e' },
             { nombre: 'Amarillo', hex: '#eab308' },
             { nombre: 'Rosa', hex: '#ec4899' },
-            { nombre: 'Naranja', hex: '#f97316' }
+            { nombre: 'Naranja', hex: '#f97316' },
+            { nombre: 'Cian', hex: '#06b6d4' },
+            { nombre: 'Morado', hex: '#a855f7' },
+            { nombre: 'Lima', hex: '#84cc16' },
+            { nombre: 'Blanco', hex: '#f8fafc' }
         ];
 
         document.getElementById('start-btn').addEventListener('click', () => {
@@ -392,7 +432,6 @@
             }));
 
             document.getElementById('start-buttons').classList.add('hidden');
-            document.getElementById('turn-indicator').classList.remove('hidden');
             document.getElementById('game-stats').classList.remove('hidden');
 
             generateBoard();
@@ -472,8 +511,6 @@
 
             document.getElementById('close-privacy-btn').onclick = () => {
                 guideModal.classList.add('hidden');
-                const guia = listaJugadores[indiceGuiaActual];
-                document.getElementById('turn-message').textContent = `Guía: ${guia.nombre}. Da tu pista...`;
             };
         }
 
@@ -570,29 +607,29 @@
 
         function finalizarTurno() {
             let puntosParaElGuia = 0;
-
-            // Recorremos la lista de jugadores directamente
             listaJugadores.forEach((jugador, idx) => {
                 if (idx === indiceGuiaActual || !jugador.votoActual) return;
-
                 const pts = calcularPuntuacion(jugador.votoActual.fila, jugador.votoActual.columna);
                 jugador.puntos += pts;
                 if (pts >= 2) puntosParaElGuia++;
             });
 
-            // Sumar puntos al Guía
             listaJugadores[indiceGuiaActual].puntos += puntosParaElGuia;
             revelarObjetivo();
             actualizarMarcador();
 
-            document.getElementById('turn-message').innerHTML = `¡Resultados! <button id="next-turn-btn" class="ml-2 px-3 py-1 bg-gray-600 text-white rounded font-bold hover:bg-gray-500">Siguiente Ronda</button>`;
+            // Mover botón de Siguiente Ronda al Nav-bar
+            const navActions = document.getElementById('nav-actions');
+            navActions.innerHTML = `
+        <button id="next-turn-btn" class="px-6 py-2 bg-white text-gray-900 rounded-full font-bold hover:bg-acento transition-all shadow-lg">
+            Siguiente Ronda →
+        </button>
+    `;
 
             document.getElementById('next-turn-btn').onclick = () => {
-                if (confirm("¿Pasar al siguiente turno?")) {
-                    // Limpiar votos antes de la siguiente ronda
-                    listaJugadores.forEach(j => delete j.votoActual);
-                    prepararSiguienteTurno();
-                }
+                navActions.innerHTML = '';
+                listaJugadores.forEach(j => delete j.votoActual);
+                prepararSiguienteTurno();
             };
         }
 
@@ -650,8 +687,6 @@
             if (adivinadoresQueVotaron === totalAdivinadores) {
                 mostrarBotonRevelar();
             } else {
-                // Si aún faltan jugadores por votar por primera vez, 
-                // saltamos al siguiente automáticamente para agilizar
                 do {
                     jugadorActualVotando = (jugadorActualVotando + 1) % listaJugadores.length;
                 } while (jugadorActualVotando === indiceGuiaActual);
@@ -661,21 +696,17 @@
         }
 
         function mostrarBotonRevelar() {
-            const contenedorMensaje = document.getElementById('turn-message');
-            contenedorMensaje.innerHTML = `
-        <div class="flex items-center justify-center gap-4">
-            <span class="text-yellow-400 font-bold animate-pulse">¡Todos han votado!</span>
-            <button id="reveal-btn" class="px-6 py-2 bg-acento text-gray-900 rounded-full font-black hover:bg-white hover:scale-105 transition-all shadow-lg">
-                REVELAR COLOR
-            </button>
-        </div>
+            const navActions = document.getElementById('nav-actions');
+            navActions.innerHTML = `
+        <button id="reveal-btn" class="px-6 py-2 bg-acento text-gray-900 rounded-full font-black hover:bg-white hover:scale-105 transition-all shadow-[0_0_15px_rgba(30,200,197,0.5)] animate-bounce">
+            REVELAR COLOR
+        </button>
     `;
 
-            // Vincular el evento de clic al botón recién creado
-            document.getElementById('reveal-btn').onclick = finalizarTurno;
-
-            // Actualizamos el marcador para que se vea quién es el último en votar
-            actualizarMarcador();
+            document.getElementById('reveal-btn').onclick = () => {
+                navActions.innerHTML = ''; // Limpiar tras pulsar
+                finalizarTurno();
+            };
         }
 
         function actualizarAparienciaCelda(elemento) {
@@ -726,21 +757,22 @@
         */
         function actualizarMarcador() {
             const statsContainer = document.getElementById('game-stats');
-            statsContainer.innerHTML = '<h2 class="text-xl font-prisma text-acento mb-2 hidden lg:block">Puntuación</h2>';
+            statsContainer.innerHTML = '';
+
+            // Forzamos diseño compacto para aprovechar el contenedor estrecho
+            const esCompacto = true;
 
             listaJugadores.forEach((jugador, index) => {
                 const esGuia = index === indiceGuiaActual;
                 const esSuTurno = index === jugadorActualVotando;
 
                 const card = document.createElement('div');
-                card.className = `bg-tarjeta p-3 rounded-lg border-2 flex justify-between items-center transition-all cursor-pointer hover:brightness-110 relative`;
+                // Usamos p-1.5 y mb-1 para pegar más las tarjetas entre sí
+                card.className = `bg-tarjeta p-1.5 rounded-lg border-2 flex justify-between items-center transition-all cursor-pointer hover:brightness-110 relative mb-1 shadow-sm`;
                 card.style.borderColor = esSuTurno ? jugador.color : (esGuia ? 'var(--color-acento)' : '#374151');
 
-                // Al hacer clic en la tarjeta (si no es guía), seleccionamos al jugador activo
                 card.onclick = (e) => {
-                    // Si hacemos clic en el botón de "ver color", no disparamos el cambio de turno
                     if (e.target.closest('.view-color-btn')) return;
-
                     if (!esGuia) {
                         jugadorActualVotando = index;
                         actualizarMarcador();
@@ -748,35 +780,35 @@
                     }
                 };
 
-                // Botón para que el guía consulte su color
                 const botonConsultar = esGuia ? `
-            <button class="view-color-btn p-1 ml-2 bg-gray-700 hover:bg-gray-600 rounded-md text-acento border border-acento/30" title="Ver mi color">
+            <button class="view-color-btn p-1 ml-1 bg-gray-700 hover:bg-gray-600 rounded text-[10px] border border-acento/30">
                 👁️
             </button>
         ` : '';
 
+                // Diseño en una sola línea con texto muy ajustado
                 card.innerHTML = `
-            <div class="flex flex-col">
-                <span class="text-[10px] uppercase font-bold" style="color: ${jugador.color}">
-                    ${esGuia ? '🎨 Guía' : '🔍 Adivinando'}
+            <div class="flex items-center space-x-1 overflow-hidden min-w-0 flex-1">
+                <span class="text-xs" title="${esGuia ? 'Guía' : 'Jugador'}">
+                    ${esGuia ? '🎨' : '👤'}
                 </span>
-                <div class="flex items-center">
-                    <span class="font-prisma text-lg text-white">${jugador.nombre} ${esSuTurno ? '⚡' : ''}</span>
+                <div class="flex items-center min-w-0">
+                    <span class="font-prisma text-xs text-white truncate">
+                        ${jugador.nombre} ${esSuTurno ? '⚡' : ''}
+                    </span>
                     ${botonConsultar}
                 </div>
             </div>
-            <div class="px-3 py-1 rounded-full font-bold text-xl text-gray-900" style="background-color: ${jugador.color}">
+            <div class="px-1.5 py-0.5 text-sm rounded-md font-bold text-gray-900 ml-1 min-w-[24px] text-center" style="background-color: ${jugador.color}">
                 ${jugador.puntos}
             </div>
         `;
 
                 statsContainer.appendChild(card);
 
-                // Asignar evento al botón de consultar
                 if (esGuia) {
-                    const btn = card.querySelector('.view-color-btn');
-                    btn.onclick = (e) => {
-                        e.stopPropagation(); // Evita conflictos con el click de la tarjeta
+                    card.querySelector('.view-color-btn').onclick = (e) => {
+                        e.stopPropagation();
                         mostrarRecordatorioColor();
                     };
                 }
