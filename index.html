@@ -307,64 +307,72 @@
 
         const board = document.getElementById('game-board');
 
-
-
         function generateBoard() {
             const board = document.getElementById('game-board');
             board.innerHTML = '';
-            board.style.gridTemplateColumns = `repeat(31, 1fr)`;
+            board.style.gridTemplateColumns = `repeat(32, 1fr)`; // 1 (letra) + 30 (col) + 1 (letra)
 
-            // Fila 0: Números
-            const corner = document.createElement('div');
-            board.appendChild(corner);
+            // --- FILA SUPERIOR: Números ---
+            board.appendChild(document.createElement('div')); // Esquina superior izquierda
             for (let c = 1; c <= 30; c++) {
                 const numCell = document.createElement('div');
                 numCell.className = 'cell-label';
                 numCell.textContent = c;
                 board.appendChild(numCell);
             }
+            board.appendChild(document.createElement('div')); // Esquina superior derecha
 
-            // Centro del tablero para cálculos
+            // --- CUERPO DEL TABLERO: Letra + Colores + Letra ---
             const centerX = 14.5;
             const centerY = 7.5;
 
             for (let r = 0; r < rows; r++) {
-                const letterCell = document.createElement('div');
-                letterCell.className = 'letter-cell cell-label'; // Asegúrate de tener esta clase en CSS
-                letterCell.textContent = letras[r];
-                board.appendChild(letterCell);
+                // Letra IZQUIERDA
+                const letterLeft = document.createElement('div');
+                letterLeft.className = 'cell-label font-bold';
+                letterLeft.textContent = letras[r];
+                board.appendChild(letterLeft);
 
+                // Bloque de 30 colores
                 for (let c = 0; c < columns; c++) {
                     const cell = document.createElement('div');
 
+                    // Lógica de color HSL (se mantiene igual)
                     const dx = c - centerX;
                     const dy = r - centerY;
-
-                    // 1. Tono (Hue): Distribución radial
                     let h = (Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
                     if (h < 0) h += 360;
-
-                    // 2. Distancia al centro (normalizada de 0 a 1)
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
                     const pctDist = dist / maxDist;
-
-                    // 3. Luminosidad (Lightness): Invertida
-                    // Centro (distancia 0) -> l = 85% (claro)
-                    // Bordes (distancia 1) -> l = 15% (oscuro)
                     const l = 85 - (pctDist * 70);
-
-                    // 4. Saturación: Más vibrante donde hay color (centro-medio)
                     const s = 90 - (pctDist * 30);
-
                     const color = `hsl(${h}, ${s}%, ${l}%)`;
 
                     cell.style.backgroundColor = color;
                     cell.className = 'aspect-square w-full cursor-pointer hover:scale-110 hover:z-10 transition-transform duration-100 rounded-sm shadow-sm';
+                    cell.dataset.fila = r;
+                    cell.dataset.columna = c;
                     cell.addEventListener('click', () => manejarClicCelda(r, c, cell));
                     board.appendChild(cell);
                 }
+
+                // Letra DERECHA [NUEVO]
+                const letterRight = document.createElement('div');
+                letterRight.className = 'cell-label font-bold';
+                letterRight.textContent = letras[r];
+                board.appendChild(letterRight);
             }
+
+            // --- FILA INFERIOR: Números [NUEVO] ---
+            board.appendChild(document.createElement('div')); // Esquina inferior izquierda
+            for (let c = 1; c <= 30; c++) {
+                const numCell = document.createElement('div');
+                numCell.className = 'cell-label';
+                numCell.textContent = c;
+                board.appendChild(numCell);
+            }
+            board.appendChild(document.createElement('div')); // Esquina inferior derecha
         }
         function highlightSelection(element) {
             // Quitar borde a otros
@@ -519,7 +527,10 @@
 
             const getCeldaReal = (f, c) => {
                 if (f < 0 || f >= rows || c < 0 || c >= columns) return null;
-                const indiceDOM = ((f + 1) * 31) + (c + 1);
+                // Ahora cada fila tiene 32 elementos. 
+                // (f + 1) salta la fila de números superior.
+                // (c + 1) salta la columna de letras de la izquierda.
+                const indiceDOM = ((f + 1) * 32) + (c + 1);
                 return todasLasCeldas[indiceDOM];
             };
 
