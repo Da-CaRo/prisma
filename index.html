@@ -517,56 +517,55 @@
         function revelarObjetivo() {
             const todasLasCeldas = document.querySelectorAll('#game-board > div');
 
-            // Función auxiliar para obtener la celda correcta ignorando las etiquetas
             const getCeldaReal = (f, c) => {
-                // Validamos que no se salga de los límites de los colores
                 if (f < 0 || f >= rows || c < 0 || c >= columns) return null;
-
-                // FÓRMULA: 
-                // (f + 1) -> Saltamos la fila de números superior
-                // * 31    -> Cada fila ahora tiene 31 elementos
-                // + (c + 1) -> Saltamos la celda de la letra a la izquierda
                 const indiceDOM = ((f + 1) * 31) + (c + 1);
                 return todasLasCeldas[indiceDOM];
             };
 
-            // 1. Limpiar cualquier marca previa (opcional pero recomendado)
-            todasLasCeldas.forEach(el => {
-                el.style.outline = 'none';
-                el.style.border = 'none';
-                el.classList.remove('score-3', 'score-zone-2', 'score-zone-1');
-            });
-
-            // 2. Marcar el Centro (3 puntos)
+            // 1. Marcar el Centro (Estrella y brillo blanco)
             const centro = getCeldaReal(colorObjetivo.fila, colorObjetivo.columna);
             if (centro) {
                 centro.classList.add('score-3');
-                centro.animate([
-                    { transform: 'scale(1)', boxShadow: '0 0 0px white' },
-                    { transform: 'scale(1.3)', boxShadow: '0 0 15px white' }
-                ], { duration: 500, fill: 'forwards' });
+                centro.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white font-bold drop-shadow-md">⭐</div>';
+                centro.style.zIndex = "30";
             }
 
-            // 3. Dibujar los cuadros de puntuación (Zonas de 2 y 1 punto)
+            // 2. Dibujar zonas de puntuación (Bordes sutiles)
             for (let fOffset = -2; fOffset <= 2; fOffset++) {
                 for (let cOffset = -2; cOffset <= 2; cOffset++) {
                     const f = colorObjetivo.fila + fOffset;
                     const c = colorObjetivo.columna + cOffset;
                     const cell = getCeldaReal(f, c);
-
-                    if (cell) {
+                    if (cell && cell !== centro) {
                         const dist = Math.max(Math.abs(fOffset), Math.abs(cOffset));
-
-                        if (dist === 1) {
-                            // Cuadrado de 3x3 (2 puntos)
-                            cell.style.border = "2px solid rgba(255, 255, 255, 0.8)";
-                        } else if (dist === 2) {
-                            // Cuadrado de 5x5 (1 punto)
-                            cell.style.border = "1px dashed rgba(255, 255, 255, 0.5)";
-                        }
+                        if (dist === 1) cell.classList.add('score-zone-2');
+                        else if (dist === 2) cell.classList.add('score-zone-1');
                     }
                 }
             }
+
+            // 3. NUEVO: RESALTAR VOTOS DE LOS JUGADORES
+            // Buscamos todas las celdas donde alguien votó
+            document.querySelectorAll('#game-board div[data-votos]').forEach(el => {
+                const votos = JSON.parse(el.dataset.votos);
+
+                // Aplicamos un efecto de elevación y brillo extra
+                el.style.transition = "all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                el.style.transform = "scale(1.2)"; // Hacemos la casilla más grande
+                el.style.zIndex = "40"; // Por encima de las líneas de puntuación
+
+                if (votos.length === 1) {
+                    const colorJugador = listaJugadores[votos[0]].color;
+                    el.style.boxShadow = `0 0 20px ${colorJugador}, inset 0 0 10px white`;
+                    el.style.outline = `3px solid white`;
+                    el.style.outlineOffset = "1px";
+                } else {
+                    // Si hay varios, intensificamos el anillo multicolor que ya tenía
+                    el.style.boxShadow = `0 0 25px rgba(255, 255, 255, 0.8)`;
+                    el.style.outline = `2px solid white`;
+                }
+            });
         }
 
         function iniciarRonda() {
@@ -628,18 +627,22 @@
         }
 
         function prepararSiguienteTurno() {
-            // 1. Resetear votos en los datos
-            listaJugadores.forEach(j => {
-                delete j.votoActual;
+            // Limpieza visual profunda
+            document.querySelectorAll('#game-board div').forEach(el => {
+                el.style.transform = "none";
+                el.style.boxShadow = "none";
+                el.style.outline = "none";
+                el.style.zIndex = "1";
+                el.innerHTML = "";
             });
 
-            // 2. Resetear contadores
+            listaJugadores.forEach(j => delete j.votoActual);
             votosRealizados = 0;
 
-            // 3. Generar nuevo tablero (esto limpia los dataset.votos del DOM)
-            generateBoard();
+            // Cambiar el guía para la siguiente ronda (opcional)
+            indiceGuiaActual = (indiceGuiaActual + 1) % listaJugadores.length;
 
-            // 4. Iniciar nueva ronda (cambio de guía, etc.)
+            generateBoard();
             iniciarRonda();
         }
 
