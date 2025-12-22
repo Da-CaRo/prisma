@@ -87,39 +87,38 @@
         #game-board {
             display: grid;
             grid-template-columns: repeat(31, 1fr);
-            gap: 0.5rem;
+            gap: 0.2rem;
         }
 
-        /* Marco para 3 puntos (el centro) */
+        /* Marco para 3 puntos */
         .score-3 {
-            outline: 4px solid #ffffff !important;
-            outline-offset: -2px;
-            z-index: 30;
+            outline: 3px solid white !important;
+            outline-offset: 2px;
+            z-index: 50;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
         }
 
         /* Marco para 2 puntos (cuadrado 3x3) */
         .score-zone-2 {
-            border: 3px solid rgba(255, 255, 255, 0.6);
-            pointer-events: none;
-            z-index: 25;
+            border: 2px solid rgba(255, 255, 255, 0.9) !important;
+            z-index: 40;
         }
 
         /* Marco para 1 punto (cuadrado 5x5) */
         .score-zone-1 {
-            border: 2px dashed rgba(255, 255, 255, 0.4);
-            pointer-events: none;
-            z-index: 20;
+            border: 1.5px dashed rgba(255, 255, 255, 0.6) !important;
+            z-index: 30;
         }
 
-        /* Estilo para las celdas que son etiquetas */
+        /* Estilo para las etiquetas integradas */
         .cell-label {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.65rem;
-            font-weight: bold;
-            color: var(--color-texto-tarjeta);
-            aspect-ratio: 1 / 1;
+            font-size: 0.7rem;
+            color: #94a3b8;
+            pointer-events: none;
+            /* Para que no se puedan clickar */
         }
     </style>
 </head>
@@ -286,15 +285,11 @@
         function generateBoard() {
             const board = document.getElementById('game-board');
             board.innerHTML = '';
-
-            // 1. Configurar el grid: 31 columnas (1 para letra + 30 de colores)
             board.style.gridTemplateColumns = `repeat(31, 1fr)`;
 
-            // --- FILA 0: Números ---
-            // Celda esquina superior izquierda (vacía)
+            // Fila 0: Números
             const corner = document.createElement('div');
             board.appendChild(corner);
-
             for (let c = 1; c <= 30; c++) {
                 const numCell = document.createElement('div');
                 numCell.className = 'cell-label';
@@ -302,31 +297,48 @@
                 board.appendChild(numCell);
             }
 
-            // --- FILAS A-P ---
+            // Centro del tablero para cálculos
+            const centerX = 14.5;
+            const centerY = 7.5;
+
             for (let r = 0; r < rows; r++) {
-                // A. Celda de Letra (Columna 0 de la fila)
                 const letterCell = document.createElement('div');
-                letterCell.className = 'cell-label';
+                letterCell.className = 'letter-cell cell-label'; // Asegúrate de tener esta clase en CSS
                 letterCell.textContent = letras[r];
                 board.appendChild(letterCell);
 
-                // B. Celdas de Colores (Columnas 1-30)
                 for (let c = 0; c < columns; c++) {
                     const cell = document.createElement('div');
-                    const h = (c / columns) * 360;
-                    const l = 100 - ((r / (rows - 1)) * 80 + 10);
-                    const color = `hsl(${h}, 70%, ${l}%)`;
+
+                    const dx = c - centerX;
+                    const dy = r - centerY;
+
+                    // 1. Tono (Hue): Distribución radial
+                    let h = (Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
+                    if (h < 0) h += 360;
+
+                    // 2. Distancia al centro (normalizada de 0 a 1)
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+                    const pctDist = dist / maxDist;
+
+                    // 3. Luminosidad (Lightness): Invertida
+                    // Centro (distancia 0) -> l = 85% (claro)
+                    // Bordes (distancia 1) -> l = 15% (oscuro)
+                    const l = 85 - (pctDist * 70);
+
+                    // 4. Saturación: Más vibrante donde hay color (centro-medio)
+                    const s = 90 - (pctDist * 30);
+
+                    const color = `hsl(${h}, ${s}%, ${l}%)`;
 
                     cell.style.backgroundColor = color;
                     cell.className = 'aspect-square w-full cursor-pointer hover:scale-110 hover:z-10 transition-transform duration-100 rounded-sm shadow-sm';
-
-                    // Pasamos r y c originales para no romper la lógica de puntuación
                     cell.addEventListener('click', () => manejarClicCelda(r, c, cell));
                     board.appendChild(cell);
                 }
             }
         }
-
         function highlightSelection(element) {
             // Quitar borde a otros
             document.querySelectorAll('#game-board div').forEach(el => el.style.outline = 'none');
@@ -395,25 +407,42 @@
 
         // Función mejorada para seleccionar el color
         function seleccionarColorSecreto() {
-            // Generar posición lógica (0-15 y 0-29)
+            // 1. Generar posición lógica aleatoria (0-15 y 0-29)
             const rAleatoria = Math.floor(Math.random() * rows);
             const cAleatoria = Math.floor(Math.random() * columns);
 
-            const h = (cAleatoria / columns) * 360;
-            const l = 100 - ((rAleatoria / (rows - 1)) * 80 + 10);
-            const colorHsl = `hsl(${h}, 70%, ${l}%)`;
+            // 2. REPLICAR LÓGICA DE GENERATEBOARD
+            const centerX = 14.5;
+            const centerY = 7.5;
+            const dx = cAleatoria - centerX;
+            const dy = rAleatoria - centerY;
 
-            // El texto para el guía (Letra A-P y Número 1-30)
+            // Tono (Hue) radial
+            let h = (Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
+            if (h < 0) h += 360;
+
+            // Distancia para Luminosidad y Saturación
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+            const pctDist = dist / maxDist;
+
+            // Luminosidad: Centro claro, bordes oscuros
+            const l = 85 - (pctDist * 70);
+            // Saturación
+            const s = 90 - (pctDist * 30);
+
+            const colorHsl = `hsl(${h}, ${s}%, ${l}%)`;
             const coordenadaTexto = `${letras[rAleatoria]}${cAleatoria + 1}`;
 
+            // 3. Guardar el objetivo con los valores correctos
             colorObjetivo = {
                 fila: rAleatoria,
                 columna: cAleatoria,
+                coordenada: coordenadaTexto,
                 hsl: colorHsl,
-                coordenada: coordenadaTexto
             };
 
-            // Actualizar Modal
+            // 4. Actualizar Modal con el color real del tablero
             targetPreview.style.backgroundColor = colorHsl;
             document.querySelector('#guide-modal p').innerHTML =
                 `Tu color está en: <b class="text-acento text-xl">${coordenadaTexto}</b><br>Memoriza el tono y da tu pista.`;
@@ -421,20 +450,31 @@
             guideModal.classList.remove('hidden');
         }
 
-        // Función para mostrar la respuesta correcta en el tablero
         function revelarObjetivo() {
             const todasLasCeldas = document.querySelectorAll('#game-board > div');
 
-            // Función auxiliar para obtener el elemento del DOM basado en coordenadas lógicas
-            const getCell = (f, c) => {
+            // Función auxiliar para obtener la celda correcta ignorando las etiquetas
+            const getCeldaReal = (f, c) => {
+                // Validamos que no se salga de los límites de los colores
                 if (f < 0 || f >= rows || c < 0 || c >= columns) return null;
-                // (f + 1) para saltar fila de números, (c + 1) para saltar columna de letras
-                const idx = ((f + 1) * 31) + (c + 1);
-                return todasLasCeldas[idx];
+
+                // FÓRMULA: 
+                // (f + 1) -> Saltamos la fila de números superior
+                // * 31    -> Cada fila ahora tiene 31 elementos
+                // + (c + 1) -> Saltamos la celda de la letra a la izquierda
+                const indiceDOM = ((f + 1) * 31) + (c + 1);
+                return todasLasCeldas[indiceDOM];
             };
 
-            // 1. Marcar el centro (3 puntos)
-            const centro = getCell(colorObjetivo.fila, colorObjetivo.columna);
+            // 1. Limpiar cualquier marca previa (opcional pero recomendado)
+            todasLasCeldas.forEach(el => {
+                el.style.outline = 'none';
+                el.style.border = 'none';
+                el.classList.remove('score-3', 'score-zone-2', 'score-zone-1');
+            });
+
+            // 2. Marcar el Centro (3 puntos)
+            const centro = getCeldaReal(colorObjetivo.fila, colorObjetivo.columna);
             if (centro) {
                 centro.classList.add('score-3');
                 centro.animate([
@@ -443,31 +483,30 @@
                 ], { duration: 500, fill: 'forwards' });
             }
 
-            // 2. Marcar zonas de 2 y 1 punto
-            // Recorremos un área de 5x5 alrededor del centro
+            // 3. Dibujar los cuadros de puntuación (Zonas de 2 y 1 punto)
             for (let fOffset = -2; fOffset <= 2; fOffset++) {
                 for (let cOffset = -2; cOffset <= 2; cOffset++) {
                     const f = colorObjetivo.fila + fOffset;
                     const c = colorObjetivo.columna + cOffset;
-                    const cell = getCell(f, c);
+                    const cell = getCeldaReal(f, c);
 
                     if (cell) {
-                        const maxDist = Math.max(Math.abs(fOffset), Math.abs(cOffset));
+                        const dist = Math.max(Math.abs(fOffset), Math.abs(cOffset));
 
-                        if (maxDist === 1) {
-                            // Zona de 2 puntos (anillo inmediato)
-                            cell.classList.add('score-zone-2');
-                        } else if (maxDist === 2) {
-                            // Zona de 1 punto (anillo exterior)
-                            cell.classList.add('score-zone-1');
+                        if (dist === 1) {
+                            // Cuadrado de 3x3 (2 puntos)
+                            cell.style.border = "2px solid rgba(255, 255, 255, 0.8)";
+                        } else if (dist === 2) {
+                            // Cuadrado de 5x5 (1 punto)
+                            cell.style.border = "1px dashed rgba(255, 255, 255, 0.5)";
                         }
                     }
                 }
             }
 
-            // Mostrar mensaje con la coordenada final
+            // Actualizar mensaje de interfaz
             document.getElementById('turn-message').innerHTML =
-                `¡Revelado! El color era <b class="text-white">${colorObjetivo.coordenada}</b>`;
+                `Color real: <b class="text-white">${colorObjetivo.coordenada}</b>`;
         }
 
         function iniciarRonda() {
@@ -498,9 +537,50 @@
                 document.getElementById('turn-message').textContent = `Votos: ${votosRealizados}/${listaJugadores.length - 1}. ¡Siguiente jugador!`;
             }
         }
+        
         function finalizarTurno() {
-            revelarObjetivo(); // Muestra el marco blanco en el color real
-            document.getElementById('turn-message').textContent = "¡Ronda completada!";
+            // 1. Identificar todas las celdas que tienen un voto (marcadas en manejarClicCelda)
+            const celdasVotadas = document.querySelectorAll('#game-board div[data-voto-fila]');
+            let puntosParaElGuia = 0;
+
+            // 2. Determinar el orden de los adivinadores para repartir los puntos
+            // Creamos una lista de los índices de los jugadores que NO son el guía
+            let ordenAdivinadores = [];
+            let tempIdx = (indiceGuiaActual + 1) % listaJugadores.length;
+
+            while (ordenAdivinadores.length < listaJugadores.length - 1) {
+                if (tempIdx !== indiceGuiaActual) {
+                    ordenAdivinadores.push(tempIdx);
+                }
+                tempIdx = (tempIdx + 1) % listaJugadores.length;
+            }
+
+            // 3. Procesar cada voto y sumar puntos a adivinadores y al guía
+            celdasVotadas.forEach((celda, i) => {
+                const f = parseInt(celda.dataset.votoFila);
+                const c = parseInt(celda.dataset.votoColumna);
+                const pts = calcularPuntuacion(f, c);
+
+                // Sumar puntos al adivinador correspondiente según el orden de votación
+                const indexJugador = ordenAdivinadores[i];
+                if (indexJugador !== undefined) {
+                    listaJugadores[indexJugador].puntos += pts;
+                }
+
+                // Regla del Guía: +1 punto por cada acierto de 2 o 3 puntos
+                if (pts >= 2) {
+                    puntosParaElGuia++;
+                }
+            });
+
+            // 4. Aplicar puntos acumulados al Guía
+            listaJugadores[indiceGuiaActual].puntos += puntosParaElGuia;
+
+            // 5. Revelar visualmente y actualizar el marcador de golpe
+            revelarObjetivo();
+            actualizarMarcador();
+
+            document.getElementById('turn-message').textContent = "¡Ronda completada! Puntos repartidos.";
 
             setTimeout(() => {
                 if (confirm("¿Pasar al siguiente turno?")) {
@@ -528,23 +608,23 @@
         function manejarClicCelda(fila, columna, elemento) {
             if (votosRealizados >= listaJugadores.length - 1) return;
 
-            const puntos = calcularPuntuacion(fila, columna);
-            listaJugadores[jugadorActualVotando].puntos += puntos;
+            // 1. Guardar la elección en el elemento para procesarla luego
+            // Guardamos la fila y columna como atributos de datos en la celda
+            elemento.dataset.votoFila = fila;
+            elemento.dataset.votoColumna = columna;
 
-            // Usamos directamente el 'elemento' que viene del evento click
+            // 2. Efecto visual de selección
             elemento.style.outline = '3px solid rgba(255,255,255,0.8)';
             elemento.style.outlineOffset = '-3px';
 
             votosRealizados++;
 
-            // 4. Pasar al siguiente jugador (saltando al guía)
+            // 3. Pasar al siguiente jugador (saltando al guía)
             do {
                 jugadorActualVotando = (jugadorActualVotando + 1) % listaJugadores.length;
             } while (jugadorActualVotando === indiceGuiaActual && votosRealizados < listaJugadores.length - 1);
 
-            actualizarMarcador();
-
-            // 5. ¿Han votado todos?
+            // 4. ¿Han votado todos?
             if (votosRealizados === listaJugadores.length - 1) {
                 finalizarTurno();
             } else {
