@@ -382,11 +382,21 @@
 
         // Botón de inicio
         // Configurar jugadores al empezar
+        const coloresJugadores = [
+            { nombre: 'Rojo', hex: '#ef4444' },
+            { nombre: 'Azul', hex: '#3b82f6' },
+            { nombre: 'Verde', hex: '#22c55e' },
+            { nombre: 'Amarillo', hex: '#eab308' },
+            { nombre: 'Rosa', hex: '#ec4899' },
+            { nombre: 'Naranja', hex: '#f97316' }
+        ];
+
         document.getElementById('start-btn').addEventListener('click', () => {
             const numPlayers = parseInt(document.getElementById('players-select').value);
             listaJugadores = Array.from({ length: numPlayers }, (_, i) => ({
                 id: i,
-                nombre: `Jugador ${i + 1}`,
+                nombre: coloresJugadores[i].nombre,
+                color: coloresJugadores[i].hex,
                 puntos: 0
             }));
 
@@ -394,9 +404,7 @@
             document.getElementById('turn-indicator').classList.remove('hidden');
             document.getElementById('game-stats').classList.remove('hidden');
 
-            // 1. Generar tablero primero
             generateBoard();
-            // 3. Iniciar la ronda
             iniciarRonda();
         });
 
@@ -537,98 +545,160 @@
                 document.getElementById('turn-message').textContent = `Votos: ${votosRealizados}/${listaJugadores.length - 1}. ¡Siguiente jugador!`;
             }
         }
-        
+
         function finalizarTurno() {
-            // 1. Identificar todas las celdas que tienen un voto (marcadas en manejarClicCelda)
-            const celdasVotadas = document.querySelectorAll('#game-board div[data-voto-fila]');
             let puntosParaElGuia = 0;
 
-            // 2. Determinar el orden de los adivinadores para repartir los puntos
-            // Creamos una lista de los índices de los jugadores que NO son el guía
-            let ordenAdivinadores = [];
-            let tempIdx = (indiceGuiaActual + 1) % listaJugadores.length;
+            // Recorremos la lista de jugadores directamente
+            listaJugadores.forEach((jugador, idx) => {
+                if (idx === indiceGuiaActual || !jugador.votoActual) return;
 
-            while (ordenAdivinadores.length < listaJugadores.length - 1) {
-                if (tempIdx !== indiceGuiaActual) {
-                    ordenAdivinadores.push(tempIdx);
-                }
-                tempIdx = (tempIdx + 1) % listaJugadores.length;
-            }
-
-            // 3. Procesar cada voto y sumar puntos a adivinadores y al guía
-            celdasVotadas.forEach((celda, i) => {
-                const f = parseInt(celda.dataset.votoFila);
-                const c = parseInt(celda.dataset.votoColumna);
-                const pts = calcularPuntuacion(f, c);
-
-                // Sumar puntos al adivinador correspondiente según el orden de votación
-                const indexJugador = ordenAdivinadores[i];
-                if (indexJugador !== undefined) {
-                    listaJugadores[indexJugador].puntos += pts;
-                }
-
-                // Regla del Guía: +1 punto por cada acierto de 2 o 3 puntos
-                if (pts >= 2) {
-                    puntosParaElGuia++;
-                }
+                const pts = calcularPuntuacion(jugador.votoActual.fila, jugador.votoActual.columna);
+                jugador.puntos += pts;
+                if (pts >= 2) puntosParaElGuia++;
             });
 
-            // 4. Aplicar puntos acumulados al Guía
+            // Sumar puntos al Guía
             listaJugadores[indiceGuiaActual].puntos += puntosParaElGuia;
-
-            // 5. Revelar visualmente y actualizar el marcador de golpe
             revelarObjetivo();
             actualizarMarcador();
 
-            document.getElementById('turn-message').textContent = "¡Ronda completada! Puntos repartidos.";
+            document.getElementById('turn-message').innerHTML = `¡Resultados! <button id="next-turn-btn" class="ml-2 px-3 py-1 bg-gray-600 text-white rounded font-bold hover:bg-gray-500">Siguiente Ronda</button>`;
 
-            setTimeout(() => {
+            document.getElementById('next-turn-btn').onclick = () => {
                 if (confirm("¿Pasar al siguiente turno?")) {
+                    // Limpiar votos antes de la siguiente ronda
+                    listaJugadores.forEach(j => delete j.votoActual);
                     prepararSiguienteTurno();
                 }
-            }, 1500);
+            };
         }
 
         function prepararSiguienteTurno() {
-            generateBoard(); // Limpia el tablero
-            indiceGuiaActual = (indiceGuiaActual + 1) % listaJugadores.length;
+            // 1. Resetear votos en los datos
+            listaJugadores.forEach(j => {
+                delete j.votoActual;
+            });
 
-            if (indiceGuiaActual === 0) rondaActual++;
+            // 2. Resetear contadores
+            votosRealizados = 0;
 
-            if (rondaActual <= MAX_RONDAS) {
-                iniciarRonda();
-            } else {
-                alert("Fin de la partida. ¡Revisa el marcador final!");
-            }
+            // 3. Generar nuevo tablero (esto limpia los dataset.votos del DOM)
+            generateBoard();
+
+            // 4. Iniciar nueva ronda (cambio de guía, etc.)
+            iniciarRonda();
         }
 
         /**
         * Modifica tu función de clic en la celda para incluir esto:
         */
         function manejarClicCelda(fila, columna, elemento) {
-            if (votosRealizados >= listaJugadores.length - 1) return;
+            const jugadorActivo = listaJugadores[jugadorActualVotando];
 
-            // 1. Guardar la elección en el elemento para procesarla luego
-            // Guardamos la fila y columna como atributos de datos en la celda
-            elemento.dataset.votoFila = fila;
-            elemento.dataset.votoColumna = columna;
+            // 1. LIMPIEZA TOTAL DEL VOTO ANTERIOR
+            // Buscamos en todo el tablero qué celda tiene el ID de este jugador en su dataset de votos
+            document.querySelectorAll('#game-board div[data-votos]').forEach(el => {
+                let votos = JSON.parse(el.dataset.votos);
+                if (votos.includes(jugadorActualVotando)) {
+                    // Filtramos al jugador que se va
+                    votos = votos.filter(id => id !== jugadorActualVotando);
 
-            // 2. Efecto visual de selección
-            elemento.style.outline = '3px solid rgba(255,255,255,0.8)';
-            elemento.style.outlineOffset = '-3px';
+                    if (votos.length === 0) {
+                        delete el.dataset.votos;
+                    } else {
+                        el.dataset.votos = JSON.stringify(votos);
+                    }
+                    // Refrescamos la celda antigua (ahora tendrá un color menos o ninguno)
+                    actualizarAparienciaCelda(el);
+                }
+            });
 
-            votosRealizados++;
+            // 2. REGISTRO DEL NUEVO VOTO
+            jugadorActivo.votoActual = { fila, columna };
 
-            // 3. Pasar al siguiente jugador (saltando al guía)
-            do {
-                jugadorActualVotando = (jugadorActualVotando + 1) % listaJugadores.length;
-            } while (jugadorActualVotando === indiceGuiaActual && votosRealizados < listaJugadores.length - 1);
+            let votosNuevos = elemento.dataset.votos ? JSON.parse(elemento.dataset.votos) : [];
+            if (!votosNuevos.includes(jugadorActualVotando)) {
+                votosNuevos.push(jugadorActualVotando);
+            }
+            elemento.dataset.votos = JSON.stringify(votosNuevos);
 
-            // 4. ¿Han votado todos?
-            if (votosRealizados === listaJugadores.length - 1) {
-                finalizarTurno();
-            } else {
+            // 3. ACTUALIZAR APARIENCIA DE LA NUEVA CELDA
+            actualizarAparienciaCelda(elemento);
+
+            // 4. LÓGICA DE TURNOS Y BOTÓN DE REVELAR
+            const adivinadoresQueVotaron = listaJugadores.filter(j => j.votoActual && j.id !== indiceGuiaActual).length;
+            const totalAdivinadores = listaJugadores.length - 1;
+
+            if (adivinadoresQueVotaron < totalAdivinadores) {
+                do {
+                    jugadorActualVotando = (jugadorActualVotando + 1) % listaJugadores.length;
+                } while (jugadorActualVotando === indiceGuiaActual);
+
+                actualizarMarcador();
                 document.getElementById('turn-message').textContent = `Turno de: ${listaJugadores[jugadorActualVotando].nombre}`;
+            } else {
+                mostrarBotonRevelar();
+            }
+        }
+        function mostrarBotonRevelar() {
+            const contenedorMensaje = document.getElementById('turn-message');
+            contenedorMensaje.innerHTML = `
+        <div class="flex items-center justify-center gap-4">
+            <span class="text-yellow-400 font-bold animate-pulse">¡Todos han votado!</span>
+            <button id="reveal-btn" class="px-6 py-2 bg-acento text-gray-900 rounded-full font-black hover:bg-white hover:scale-105 transition-all shadow-lg">
+                REVELAR COLOR
+            </button>
+        </div>
+    `;
+
+            // Vincular el evento de clic al botón recién creado
+            document.getElementById('reveal-btn').onclick = finalizarTurno;
+
+            // Actualizamos el marcador para que se vea quién es el último en votar
+            actualizarMarcador();
+        }
+
+        function actualizarAparienciaCelda(elemento) {
+            if (!elemento.dataset.votos) {
+                elemento.style.outline = 'none';
+                elemento.style.boxShadow = 'none';
+                elemento.style.backgroundImage = 'none';
+                elemento.style.border = 'none'; // Limpiamos bordes previos
+                return;
+            }
+
+            const votos = JSON.parse(elemento.dataset.votos);
+            const colorCelda = elemento.style.backgroundColor; // Obtenemos el color original de la celda
+
+            // Reset general de estilos para evitar solapamientos
+            elemento.style.outline = 'none';
+            elemento.style.boxShadow = 'none';
+            elemento.style.backgroundImage = 'none';
+            elemento.style.border = '4px solid transparent'; // Creamos el espacio para el anillo
+
+            if (votos.length === 1) {
+                // UN SOLO JUGADOR: Borde sólido simple
+                const colorJugador = listaJugadores[votos[0]].color;
+                elemento.style.border = `4px solid ${colorJugador}`;
+                elemento.style.boxShadow = `0 0 10px ${colorJugador}`;
+            } else if (votos.length > 1) {
+                // VARIOS JUGADORES: El truco del anillo segmentado
+                const listaColores = votos.map(id => listaJugadores[id].color);
+                const total = listaColores.length;
+                const anguloPorJugador = 360 / total;
+
+                let gradientStr = "";
+                listaColores.forEach((col, i) => {
+                    gradientStr += `${col} ${i * anguloPorJugador}deg ${(i + 1) * anguloPorJugador}deg${i === total - 1 ? "" : ", "}`;
+                });
+
+                // 1. Usamos el color de la celda como "capa superior" para que el centro no cambie
+                // 2. Usamos el conic-gradient como "capa inferior" que solo se verá en el borde
+                elemento.style.backgroundImage = `linear-gradient(${colorCelda}, ${colorCelda}), conic-gradient(${gradientStr})`;
+                elemento.style.backgroundOrigin = "border-box";
+                elemento.style.backgroundClip = "padding-box, border-box";
+                elemento.style.boxShadow = `0 0 15px rgba(255, 255, 255, 0.4)`;
             }
         }
 
@@ -641,18 +711,21 @@
 
             listaJugadores.forEach((jugador, index) => {
                 const esGuia = index === indiceGuiaActual;
+                const esSuTurno = index === jugadorActualVotando;
 
                 const card = document.createElement('div');
-                card.className = `bg-tarjeta p-3 rounded-lg border border-gray-700 flex justify-between items-center transition-all ${esGuia ? 'card-guia' : ''}`;
+                // Usamos el color del jugador en el borde si es su turno
+                card.className = `bg-tarjeta p-3 rounded-lg border-2 flex justify-between items-center transition-all`;
+                card.style.borderColor = esSuTurno ? jugador.color : (esGuia ? 'var(--color-acento)' : '#374151');
 
                 card.innerHTML = `
             <div class="flex flex-col">
-                <span class="text-xs uppercase font-bold ${esGuia ? 'text-acento' : 'text-gray-500'}">
+                <span class="text-[10px] uppercase font-bold" style="color: ${jugador.color}">
                     ${esGuia ? '🎨 Guía' : '🔍 Adivinando'}
                 </span>
-                <span class="font-prisma text-lg">${jugador.nombre} ${index === jugadorActualVotando ? '←' : ''}</span>
+                <span class="font-prisma text-lg text-white">${jugador.nombre} ${esSuTurno ? '←' : ''}</span>
             </div>
-            <div class="puntos-badge px-3 py-1 rounded-full font-bold text-xl">
+            <div class="px-3 py-1 rounded-full font-bold text-xl text-gray-900" style="background-color: ${jugador.color}">
                 ${jugador.puntos}
             </div>
         `;
