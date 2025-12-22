@@ -10,12 +10,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Shade&display=swap" rel="stylesheet">
 
     <style>
         /* 1. DEFINICIÓN DE VARIABLES DE COLOR */
         :root {
-            --color-acento: #1ec8c5;
+            --color-acento: #f58300;
             /* Turquesa vibrante */
             --color-fondo: #0f172a;
             /* Un azul pizarra muy oscuro (slate-900) */
@@ -44,10 +44,31 @@
         }
 
         .font-prisma {
-            font-family: 'Fredoka', sans-serif;
+            font-family: 'Bungee Shade', sans-serif;
+            text-transform: uppercase;
         }
 
         /* Sobrescribir las clases de Tailwind con las variables (para el color de acento) */
+        .text-prisma {
+            /* Aplicación del Gradiente */
+            background: linear-gradient(45deg,
+                    #ffffff 20%,
+                    var(--color-acento) 50%,
+                    #e90e0e 90%);
+
+            /* Truco para que el fondo solo pinte el texto */
+            -webkit-background-clip: text;
+            background-clip: text;
+
+            /* Hacemos transparente el color original de la fuente para ver el gradiente */
+            color: transparent;
+
+            filter: drop-shadow(0 0 8px rgba(30, 200, 197, 0.3));
+            line-height: 1.2;
+            display: inline-block;
+            /* Asegura que el gradiente se calcule bien */
+        }
+
         .text-acento {
             color: var(--color-acento);
         }
@@ -166,7 +187,7 @@
         <div class="max-w-7xl mx-auto flex justify-between items-center py-0">
             <div class="flex items-center space-x-2">
                 <img src="img/favicon.png" alt="Icono Tres Pistas" class="h-8 w-8">
-                <h1 class="text-3xl font-extrabold text-acento font-prisma">
+                <h1 class="text-3xl font-extrabold text-prisma font-prisma">
                     Prisma
                 </h1>
             </div>
@@ -185,7 +206,7 @@
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 
                 <h1 class="text-5xl md:text-6xl font-extrabold mb-4">
-                    ¡Demuestra quién es el <span class="font-prisma text-acento">mejor!</span>
+                    ¡Demuestra quién es el <span class="font-prisma text-prisma">mejor!</span>
                 </h1>
                 <p class="text-xl text-tarjeta mb-12 max-w-2xl mx-auto">
                     Tres rondas, un mazo y solo una oportunidad para que tu equipo llegue a la cima. ¿Estáis preparados?
@@ -199,7 +220,7 @@
                         class="bg-tarjeta p-6 rounded-lg shadow-xl border border-tarjeta transition duration-300 h-full flex flex-col justify-between">
                         <div>
                             <div class="flex items-center space-x-3 mb-4">
-                                <span class="text-acento text-4xl block">⚙️</span>
+                                <span class="text-prisma text-4xl block">⚙️</span>
                                 <h3 class="text-4xl font-bold">Opciones</h3>
                             </div>
                             <p class="text-tarjeta text-base">
@@ -224,7 +245,7 @@
                             </p>
                         </div>
                         <a href="#" target="_blank" class="block">
-                            <span class="mt-5 inline-block text-sm font-medium text-acento hover:underline">Ver
+                            <span class="mt-5 inline-block text-sm font-medium text-prisma hover:underline">Ver
                                 Instrucciones →</span></a>
                     </div>
 
@@ -300,6 +321,7 @@
         const MAX_RONDAS = 3;
         let colorObjetivo = null;
         const letras = "ABCDEFGHIJKLMNOP".split(""); // 16 letras para 16 filas
+        let tableroBloqueado = false;
 
         // Configuración del tablero (Estilo Hues and Clues: 30x16 = 480 colores)
         const columns = 30;
@@ -523,6 +545,8 @@
         }
 
         function revelarObjetivo() {
+            tableroBloqueado = true; // Bloqueamos clics al revelar
+
             const todasLasCeldas = document.querySelectorAll('#game-board > div');
 
             const getCeldaReal = (f, c) => {
@@ -647,6 +671,8 @@
                 el.innerHTML = "";
             });
 
+            tableroBloqueado = false; // Desbloqueamos para la nueva ronda
+
             listaJugadores.forEach(j => delete j.votoActual);
             votosRealizados = 0;
 
@@ -661,6 +687,8 @@
         * Modifica tu función de clic en la celda para incluir esto:
         */
         function manejarClicCelda(fila, columna, elemento) {
+            // Si el tablero está bloqueado, ignoramos cualquier clic
+            if (tableroBloqueado) return;
             if (jugadorActualVotando === -1 || jugadorActualVotando === indiceGuiaActual) return;
 
             const jugadorActivo = listaJugadores[jugadorActualVotando];
@@ -800,7 +828,7 @@
                     ${esGuia ? '🎨' : '👤'}
                 </span>
                 <div class="flex items-center min-w-0">
-                    <span class="font-prisma text-xs text-white truncate">
+                    <span class="text-xs text-white truncate">
                         ${jugador.nombre} ${esSuTurno ? '⚡' : ''}
                     </span>
                     ${botonConsultar}
