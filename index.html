@@ -594,53 +594,50 @@
         * Modifica tu función de clic en la celda para incluir esto:
         */
         function manejarClicCelda(fila, columna, elemento) {
+            if (jugadorActualVotando === -1 || jugadorActualVotando === indiceGuiaActual) return;
+
             const jugadorActivo = listaJugadores[jugadorActualVotando];
 
-            // 1. LIMPIEZA TOTAL DEL VOTO ANTERIOR
-            // Buscamos en todo el tablero qué celda tiene el ID de este jugador en su dataset de votos
+            // 1. Limpieza del voto anterior de este jugador específico
             document.querySelectorAll('#game-board div[data-votos]').forEach(el => {
                 let votos = JSON.parse(el.dataset.votos);
                 if (votos.includes(jugadorActualVotando)) {
-                    // Filtramos al jugador que se va
                     votos = votos.filter(id => id !== jugadorActualVotando);
-
                     if (votos.length === 0) {
                         delete el.dataset.votos;
                     } else {
                         el.dataset.votos = JSON.stringify(votos);
                     }
-                    // Refrescamos la celda antigua (ahora tendrá un color menos o ninguno)
                     actualizarAparienciaCelda(el);
                 }
             });
 
-            // 2. REGISTRO DEL NUEVO VOTO
+            // 2. Registrar nuevo voto
             jugadorActivo.votoActual = { fila, columna };
-
             let votosNuevos = elemento.dataset.votos ? JSON.parse(elemento.dataset.votos) : [];
             if (!votosNuevos.includes(jugadorActualVotando)) {
                 votosNuevos.push(jugadorActualVotando);
             }
             elemento.dataset.votos = JSON.stringify(votosNuevos);
-
-            // 3. ACTUALIZAR APARIENCIA DE LA NUEVA CELDA
             actualizarAparienciaCelda(elemento);
 
-            // 4. LÓGICA DE TURNOS Y BOTÓN DE REVELAR
+            // 3. Verificar si todos han votado al menos una vez
             const adivinadoresQueVotaron = listaJugadores.filter(j => j.votoActual && j.id !== indiceGuiaActual).length;
             const totalAdivinadores = listaJugadores.length - 1;
 
-            if (adivinadoresQueVotaron < totalAdivinadores) {
+            if (adivinadoresQueVotaron === totalAdivinadores) {
+                mostrarBotonRevelar();
+            } else {
+                // Si aún faltan jugadores por votar por primera vez, 
+                // saltamos al siguiente automáticamente para agilizar
                 do {
                     jugadorActualVotando = (jugadorActualVotando + 1) % listaJugadores.length;
                 } while (jugadorActualVotando === indiceGuiaActual);
-
-                actualizarMarcador();
-                document.getElementById('turn-message').textContent = `Turno de: ${listaJugadores[jugadorActualVotando].nombre}`;
-            } else {
-                mostrarBotonRevelar();
             }
+
+            actualizarMarcador();
         }
+
         function mostrarBotonRevelar() {
             const contenedorMensaje = document.getElementById('turn-message');
             contenedorMensaje.innerHTML = `
@@ -714,16 +711,25 @@
                 const esSuTurno = index === jugadorActualVotando;
 
                 const card = document.createElement('div');
-                // Usamos el color del jugador en el borde si es su turno
-                card.className = `bg-tarjeta p-3 rounded-lg border-2 flex justify-between items-center transition-all`;
+                // Añadimos cursor pointer y un evento click
+                card.className = `bg-tarjeta p-3 rounded-lg border-2 flex justify-between items-center transition-all cursor-pointer hover:brightness-110`;
                 card.style.borderColor = esSuTurno ? jugador.color : (esGuia ? 'var(--color-acento)' : '#374151');
+
+                // Al hacer clic, este jugador se vuelve el activo para votar
+                card.onclick = () => {
+                    if (!esGuia) {
+                        jugadorActualVotando = index;
+                        actualizarMarcador();
+                        document.getElementById('turn-message').textContent = `Turno de: ${jugador.nombre}`;
+                    }
+                };
 
                 card.innerHTML = `
             <div class="flex flex-col">
                 <span class="text-[10px] uppercase font-bold" style="color: ${jugador.color}">
                     ${esGuia ? '🎨 Guía' : '🔍 Adivinando'}
                 </span>
-                <span class="font-prisma text-lg text-white">${jugador.nombre} ${esSuTurno ? '←' : ''}</span>
+                <span class="font-prisma text-lg text-white">${jugador.nombre} ${esSuTurno ? '⚡' : ''}</span>
             </div>
             <div class="px-3 py-1 rounded-full font-bold text-xl text-gray-900" style="background-color: ${jugador.color}">
                 ${jugador.puntos}
@@ -732,7 +738,6 @@
                 statsContainer.appendChild(card);
             });
         }
-
         // Evento para cerrar el modal
         closeModalBtn.addEventListener('click', () => {
             guideModal.classList.add('hidden');
