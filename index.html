@@ -249,17 +249,8 @@
         </div>
     </footer>
 
-    <div id="guide-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-        <div
-            class="bg-gray-800 p-8 rounded-2xl max-w-sm w-full text-center border-2 border-acento shadow-[0_0_20px_rgba(30,200,197,0.3)]">
-            <h2 class="text-2xl font-prisma text-acento mb-4">Tu Color Secreto</h2>
-            <div id="target-preview" class="w-32 h-32 mx-auto rounded-lg shadow-inner mb-6 border-4 border-white/20">
-            </div>
-            <p class="text-sm text-tarjeta mb-6">Memoriza este tono y da tu pista de <b>una palabra</b>.</p>
-            <button id="close-modal-btn"
-                class="w-full py-3 bg-acento text-gray-900 font-bold rounded-xl hover:bg-opacity-90 transition font-prisma">
-                ¡ENTENDIDO!
-            </button>
+    <div id="guide-modal" class="hidden fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 p-8 rounded-2xl max-w-sm w-full text-center border-2 border-acento shadow-2xl">
         </div>
     </div>
     <script type="module">
@@ -415,47 +406,75 @@
 
         // Función mejorada para seleccionar el color
         function seleccionarColorSecreto() {
-            // 1. Generar posición lógica aleatoria (0-15 y 0-29)
-            const rAleatoria = Math.floor(Math.random() * rows);
-            const cAleatoria = Math.floor(Math.random() * columns);
+            const opciones = [];
+            const contenedorOpciones = document.createElement('div');
+            contenedorOpciones.className = 'grid grid-cols-2 gap-4 mb-6';
 
-            // 2. REPLICAR LÓGICA DE GENERATEBOARD
-            const centerX = 14.5;
-            const centerY = 7.5;
-            const dx = cAleatoria - centerX;
-            const dy = rAleatoria - centerY;
+            for (let i = 0; i < 4; i++) {
+                const r = Math.floor(Math.random() * rows);
+                const c = Math.floor(Math.random() * columns);
 
-            // Tono (Hue) radial
-            let h = (Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
-            if (h < 0) h += 360;
+                // REPLICAR LÓGICA RADIAL (HSL)
+                const centerX = 14.5;
+                const centerY = 7.5;
+                const dx = c - centerX;
+                const dy = r - centerY;
+                let h = (Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
+                if (h < 0) h += 360;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
+                const pctDist = dist / maxDist;
+                const l = 85 - (pctDist * 70);
+                const s = 90 - (pctDist * 30);
+                const colorHsl = `hsl(${h}, ${s}%, ${l}%)`;
+                const coordenada = `${letras[r]}${c + 1}`;
 
-            // Distancia para Luminosidad y Saturación
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
-            const pctDist = dist / maxDist;
+                opciones.push({ fila: r, columna: c, coordenada, hsl: colorHsl });
 
-            // Luminosidad: Centro claro, bordes oscuros
-            const l = 85 - (pctDist * 70);
-            // Saturación
-            const s = 90 - (pctDist * 30);
+                // Crear botón de opción visual
+                const btnOpción = document.createElement('button');
+                btnOpción.className = 'group flex flex-col items-center p-2 rounded-xl border-2 border-transparent hover:border-acento transition-all bg-gray-700/50';
+                btnOpción.innerHTML = `
+            <div class="w-16 h-16 rounded-lg mb-2 shadow-md" style="background-color: ${colorHsl}"></div>
+            <span class="text-xs font-bold text-white">${coordenada}</span>
+        `;
 
-            const colorHsl = `hsl(${h}, ${s}%, ${l}%)`;
-            const coordenadaTexto = `${letras[rAleatoria]}${cAleatoria + 1}`;
+                btnOpción.onclick = () => confirmarSeleccionColor(opciones[i]);
+                contenedorOpciones.appendChild(btnOpción);
+            }
 
-            // 3. Guardar el objetivo con los valores correctos
-            colorObjetivo = {
-                fila: rAleatoria,
-                columna: cAleatoria,
-                coordenada: coordenadaTexto,
-                hsl: colorHsl,
-            };
-
-            // 4. Actualizar Modal con el color real del tablero
-            targetPreview.style.backgroundColor = colorHsl;
-            document.querySelector('#guide-modal p').innerHTML =
-                `Tu color está en: <b class="text-acento text-xl">${coordenadaTexto}</b><br>Memoriza el tono y da tu pista.`;
+            // Actualizar el Modal
+            const modalContent = document.querySelector('#guide-modal div');
+            modalContent.innerHTML = `
+        <h2 class="text-2xl font-prisma text-acento mb-2">Elige tu Color</h2>
+        <p class="text-xs text-tarjeta mb-4">Selecciona uno de estos 4 tonos para esta ronda:</p>
+        <div id="opciones-container"></div>
+    `;
+            document.getElementById('opciones-container').appendChild(contenedorOpciones);
 
             guideModal.classList.remove('hidden');
+        }
+
+        function confirmarSeleccionColor(colorElegido) {
+            colorObjetivo = colorElegido;
+
+            const modalContent = document.querySelector('#guide-modal div');
+            modalContent.innerHTML = `
+        <h2 class="text-2xl font-prisma text-acento mb-4">¡Color Registrado!</h2>
+        <div class="flex flex-col items-center py-4">
+            <div class="w-24 h-24 rounded-full border-4 border-white mb-4" style="background-color: ${colorElegido.hsl}"></div>
+            <p class="text-white mb-6">Has elegido <b>${colorElegido.coordenada}</b>.<br>Memorízalo bien.</p>
+            <button id="close-privacy-btn" class="w-full py-3 bg-acento text-gray-900 font-bold rounded-xl hover:bg-white transition">
+                OCULTAR Y EMPEZAR
+            </button>
+        </div>
+    `;
+
+            document.getElementById('close-privacy-btn').onclick = () => {
+                guideModal.classList.add('hidden');
+                const guia = listaJugadores[indiceGuiaActual];
+                document.getElementById('turn-message').textContent = `Guía: ${guia.nombre}. Da tu pista...`;
+            };
         }
 
         function revelarObjetivo() {
@@ -519,14 +538,17 @@
 
         function iniciarRonda() {
             votosRealizados = 0;
-            // El primer adivinador es el siguiente después del guía
             jugadorActualVotando = (indiceGuiaActual + 1) % listaJugadores.length;
 
             const guia = listaJugadores[indiceGuiaActual];
-            document.getElementById('turn-message').textContent = `Guía: ${guia.nombre}. Esperando pista...`;
-
             actualizarMarcador();
-            seleccionarColorSecreto(); // Abre el modal para el guía
+
+            // ALERT DE PRIVACIDAD
+            // Usamos setTimeout para asegurar que el marcador se actualice antes del alert
+            setTimeout(() => {
+                alert(`¡ATENCIÓN!\n\nEs el turno de ${guia.nombre} como Guía.\n\nAsegúrate de que nadie más esté mirando la pantalla antes de pulsar Aceptar.`);
+                seleccionarColorSecreto();
+            }, 100);
         }
 
         function procesarVoto(fila, columna) {
@@ -711,12 +733,14 @@
                 const esSuTurno = index === jugadorActualVotando;
 
                 const card = document.createElement('div');
-                // Añadimos cursor pointer y un evento click
-                card.className = `bg-tarjeta p-3 rounded-lg border-2 flex justify-between items-center transition-all cursor-pointer hover:brightness-110`;
+                card.className = `bg-tarjeta p-3 rounded-lg border-2 flex justify-between items-center transition-all cursor-pointer hover:brightness-110 relative`;
                 card.style.borderColor = esSuTurno ? jugador.color : (esGuia ? 'var(--color-acento)' : '#374151');
 
-                // Al hacer clic, este jugador se vuelve el activo para votar
-                card.onclick = () => {
+                // Al hacer clic en la tarjeta (si no es guía), seleccionamos al jugador activo
+                card.onclick = (e) => {
+                    // Si hacemos clic en el botón de "ver color", no disparamos el cambio de turno
+                    if (e.target.closest('.view-color-btn')) return;
+
                     if (!esGuia) {
                         jugadorActualVotando = index;
                         actualizarMarcador();
@@ -724,24 +748,69 @@
                     }
                 };
 
+                // Botón para que el guía consulte su color
+                const botonConsultar = esGuia ? `
+            <button class="view-color-btn p-1 ml-2 bg-gray-700 hover:bg-gray-600 rounded-md text-acento border border-acento/30" title="Ver mi color">
+                👁️
+            </button>
+        ` : '';
+
                 card.innerHTML = `
             <div class="flex flex-col">
                 <span class="text-[10px] uppercase font-bold" style="color: ${jugador.color}">
                     ${esGuia ? '🎨 Guía' : '🔍 Adivinando'}
                 </span>
-                <span class="font-prisma text-lg text-white">${jugador.nombre} ${esSuTurno ? '⚡' : ''}</span>
+                <div class="flex items-center">
+                    <span class="font-prisma text-lg text-white">${jugador.nombre} ${esSuTurno ? '⚡' : ''}</span>
+                    ${botonConsultar}
+                </div>
             </div>
             <div class="px-3 py-1 rounded-full font-bold text-xl text-gray-900" style="background-color: ${jugador.color}">
                 ${jugador.puntos}
             </div>
         `;
+
                 statsContainer.appendChild(card);
+
+                // Asignar evento al botón de consultar
+                if (esGuia) {
+                    const btn = card.querySelector('.view-color-btn');
+                    btn.onclick = (e) => {
+                        e.stopPropagation(); // Evita conflictos con el click de la tarjeta
+                        mostrarRecordatorioColor();
+                    };
+                }
             });
         }
-        // Evento para cerrar el modal
-        closeModalBtn.addEventListener('click', () => {
-            guideModal.classList.add('hidden');
-        });
+
+        function mostrarRecordatorioColor() {
+            if (!colorObjetivo) return;
+
+            // 1. Alert de seguridad
+            alert("RECORDATORIO PRIVADO\n\nAsegúrate de que nadie esté mirando antes de ver tu color.");
+
+            // 2. Reutilizamos el modal para mostrar el color actual
+            const modalContent = document.querySelector('#guide-modal div');
+            modalContent.innerHTML = `
+        <h2 class="text-2xl font-prisma text-acento mb-4">Recordatorio</h2>
+        <div class="flex flex-col items-center py-4">
+            <div class="w-24 h-24 rounded-full border-4 border-white mb-4 shadow-lg" style="background-color: ${colorObjetivo.hsl}"></div>
+            <p class="text-white text-lg mb-2">Tu color es <b>${colorObjetivo.coordenada}</b></p>
+            <p class="text-xs text-tarjeta mb-6">Memorízalo de nuevo y cierra esta ventana.</p>
+            <button id="close-reminder-btn" class="w-full py-3 bg-acento text-gray-900 font-bold rounded-xl hover:bg-white transition">
+                CONTINUAR PARTIDA
+            </button>
+        </div>
+    `;
+
+            guideModal.classList.remove('hidden');
+
+            document.getElementById('close-reminder-btn').onclick = () => {
+                guideModal.classList.add('hidden');
+            };
+        }
+
+
     </script>
 
 </body>
