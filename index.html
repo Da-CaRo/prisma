@@ -567,10 +567,6 @@
                     }
                 }
             }
-
-            // Actualizar mensaje de interfaz
-            document.getElementById('turn-message').innerHTML =
-                `Color real: <b class="text-white">${colorObjetivo.coordenada}</b>`;
         }
 
         function iniciarRonda() {
@@ -600,8 +596,6 @@
 
             if (votosRealizados === listaJugadores.length - 1) {
                 finalizarTurno();
-            } else {
-                document.getElementById('turn-message').textContent = `Votos: ${votosRealizados}/${listaJugadores.length - 1}. ¡Siguiente jugador!`;
             }
         }
 
@@ -776,7 +770,6 @@
                     if (!esGuia) {
                         jugadorActualVotando = index;
                         actualizarMarcador();
-                        document.getElementById('turn-message').textContent = `Turno de: ${jugador.nombre}`;
                     }
                 };
 
