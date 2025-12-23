@@ -10,12 +10,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee+Shade&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/gh/Da-CaRo/site-configs@main/control.js" data-web="prisma"></script>
 
     <style>
         /* 1. DEFINICIÓN DE VARIABLES DE COLOR */
         :root {
-            --color-acento: #1ec8c5;
+            --color-acento: #2dffeb;
             /* Turquesa vibrante */
             --color-fondo: #0f172a;
             /* Un azul pizarra muy oscuro (slate-900) */
@@ -44,10 +45,32 @@
         }
 
         .font-prisma {
-            font-family: 'Fredoka', sans-serif;
+            font-family: 'Bungee Shade', sans-serif;
+            text-transform: uppercase;
         }
 
         /* Sobrescribir las clases de Tailwind con las variables (para el color de acento) */
+        .text-prisma {
+            /* Aplicación del Gradiente */
+            background: linear-gradient(45deg,
+                    var(--color-acento) 20%,
+                    #8f54b3 40%,
+                    #fcba49 60%,
+                    #2c75e3 90%);
+
+            /* Truco para que el fondo solo pinte el texto */
+            -webkit-background-clip: text;
+            background-clip: text;
+
+            /* Hacemos transparente el color original de la fuente para ver el gradiente */
+            color: transparent;
+
+            filter: drop-shadow(0 0 8px rgba(30, 200, 197, 0.3));
+            line-height: 1.2;
+            display: inline-block;
+            /* Asegura que el gradiente se calcule bien */
+        }
+
         .text-acento {
             color: var(--color-acento);
         }
@@ -114,13 +137,7 @@
             /* Para que no se puedan clickar */
         }
 
-        /* Asegura que el contenedor principal no colapse */
-        #game-layout {
-            display: flex;
-            align-items: flex-start;
-            /* Alinea al inicio para que el marcador no estire el layout */
-            width: 100%;
-        }
+
 
         #control-bar-wrapper {
             flex-shrink: 0;
@@ -158,6 +175,30 @@
             background: var(--color-acento);
             border-radius: 10px;
         }
+
+        @keyframes pulse-acento {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(245, 131, 0, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(245, 131, 0, 0.8);
+            }
+        }
+
+        #reveal-btn {
+            animation: pulse-acento 2s infinite;
+        }
+
+        #players-list-display {
+            transition: all 0.3s ease;
+            min-height: 50px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+        }
     </style>
 </head>
 
@@ -165,13 +206,31 @@
     <header class="bg-gray-900 shadow-md p-4 border-b border-gray-800 sticky top-0 z-10">
         <div class="max-w-7xl mx-auto flex justify-between items-center py-0">
             <div class="flex items-center space-x-2">
-                <img src="img/favicon.png" alt="Icono Tres Pistas" class="h-8 w-8">
-                <h1 class="text-3xl font-extrabold text-acento font-prisma">
+                <img src="img/favicon.png" alt="Icono Prisma" class="h-8 w-8">
+                <h1 class="text-3xl font-extrabold text-prisma font-prisma">
                     Prisma
                 </h1>
             </div>
 
-            <div id="nav-actions" class="flex items-center"></div>
+            <div id="nav-actions" class="flex items-center space-x-6">
+                <div id="action-buttons"></div>
+                <div id="game-progress"
+                    class="hidden flex items-center bg-gray-800 px-4 py-1.5 rounded-full border border-gray-700 shadow-inner">
+                    <span class="text-xs font-bold text-tarjeta mr-3 uppercase tracking-wider">Progreso</span>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex flex-col items-center">
+                            <span id="round-count" class="text-acento font-prisma text-lg leading-none">1/3</span>
+                            <span class="text-[8px] text-gray-500 uppercase">Ronda</span>
+                        </div>
+                        <div class="w-px h-6 bg-gray-700"></div>
+                        <div class="flex flex-col items-center">
+                            <span id="guide-count" class="text-white font-prisma text-lg leading-none">1/3</span>
+                            <span class="text-[8px] text-gray-500 uppercase">Guías</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
 
             <button id="reset-game-btn"
                 class="py-2 px-4 bg-gray-700 hover:bg-gray-600 text-red-400 font-bold rounded-lg transition duration-150 items-center justify-center text-base disabled:opacity-50 hidden"
@@ -185,10 +244,11 @@
             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
 
                 <h1 class="text-5xl md:text-6xl font-extrabold mb-4">
-                    ¡Demuestra quién es el <span class="font-prisma text-acento">mejor!</span>
+                    Sintoniza tu percepción en el <span class="font-prisma text-prisma">espectro</span>
                 </h1>
                 <p class="text-xl text-tarjeta mb-12 max-w-2xl mx-auto">
-                    Tres rondas, un mazo y solo una oportunidad para que tu equipo llegue a la cima. ¿Estáis preparados?
+                    Encuentra el tono exacto. Tres rondas para demostrar que tus ojos ven lo que otros ignoran.
+                    ¿Lograrás dar en el centro?
                 </p>
             </div>
 
@@ -199,33 +259,57 @@
                         class="bg-tarjeta p-6 rounded-lg shadow-xl border border-tarjeta transition duration-300 h-full flex flex-col justify-between">
                         <div>
                             <div class="flex items-center space-x-3 mb-4">
-                                <span class="text-acento text-4xl block">⚙️</span>
+                                <span class="text-prisma text-4xl block">⚙️</span>
                                 <h3 class="text-4xl font-bold">Opciones</h3>
                             </div>
                             <p class="text-tarjeta text-base">
                             <div class="flex flex-col space-y-2 mb-4">
+                                <label
+                                    class="text-sm font-bold text-tarjeta uppercase tracking-widest text-center">Configurar
+                                    Jugadores</label>
 
-                                <select id="players-select"
+                                <div class="flex space-x-2">
+                                    <input type="text" id="player-name-input" placeholder="Introduce nombre (máx. 10)"
+                                        class="flex-1 p-3 bg-gray-700 border border-acento text-white rounded-lg focus:outline-none placeholder-gray-400"
+                                        maxlength="15"> <button id="add-player-btn"
+                                        class="shrink-0 bg-[--color-acento] text-white font-bold p-3 rounded-lg transition duration-150">
+                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                            xmlns="http://www.w3.org/2000/svg">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 4v16m8-8H4"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <button id="start-btn" disabled
                                     class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                                    <option value="3">3 Jugadores</option>
-                                    <option value="4">4 Jugadores</option>
-                                    <option value="5">5 Jugadores</option>
-                                    <option value="6">6 Jugadores</option>
-                                    <option value="7">7 Jugadores</option>
-                                    <option value="8">8 Jugadores</option>
-                                    <option value="9">9 Jugadores</option>
-                                    <option value="10">10 Jugadores</option>
-                                </select>
-                                <button id="start-btn"
-                                    class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded transition duration-150">
-                                    Empezar
+                                    Empezar (mín. 3)
                                 </button>
                             </div>
                             </p>
                         </div>
-                        <a href="#" target="_blank" class="block">
-                            <span class="mt-5 inline-block text-sm font-medium text-acento hover:underline">Ver
+                        <a href="https://da-caro.github.io/setup-and-play/prisma.html" target="_blank" class="block">
+                            <span class="mt-5 inline-block text-sm font-medium text-prisma hover:underline">Ver
                                 Instrucciones →</span></a>
+                    </div>
+
+                    <div
+                        class="bg-tarjeta p-6 rounded-lg shadow-xl border border-tarjeta transition duration-300 h-full flex flex-col justify-between lg:col-span-2">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-4">
+                                <span class="text-prisma text-4xl block">⚙️</span>
+                                <h3 class="text-4xl font-bold">Jugadores</h3>
+                            </div>
+                            <p class="text-tarjeta text-base">
+                            <div class="flex flex-col space-y-2 mb-4">
+
+                                <div id="players-list-display"
+                                    class="flex flex-wrap gap-2 min-h-[40px] p-2 bg-gray-900/50 rounded-lg border border-dashed border-gray-700">
+                                </div>
+
+                            </div>
+                            </p>
+                        </div>
                     </div>
 
                 </div>
@@ -234,7 +318,7 @@
     </div>
     <main class="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
 
-        <div id="game-layout" class="flex flex-col lg:flex-row lg:space-x-4 items-start">
+        <div id="game-layout" class="flex flex-col lg:flex-row lg:space-x-4 hidden">
 
             <div id="control-bar-wrapper"
                 class="flex flex-col sm:flex-row lg:flex-col justify-between items-center w-full lg:w-64 mb-6 lg:mb-0">
@@ -243,14 +327,8 @@
                 </div>
 
             </div>
-            <!--
-            <div class="flex-1 flex flex-col items-center w-full">
-                <div id="game-board" class="grid w-full bg-gray-800 p-2 rounded shadow-2xl flex-1"></div>
-            </div>-->
 
-
-            <!--<div id="game-board" class="grid gap-0.5 w-full lg:flex-1 bg-gray-800 p-1 rounded shadow-2xl">-->
-            <div id="game-board" class="grid gap-0.5 w-full lg:flex-1 bg-gray-800 p-1 rounded shadow-2xl">
+            <div id="game-board" class="grid gap-0.5 w-full lg:flex-1 bg-gray-800 p-1 rounded shadow-2xl ">
 
             </div>
         </div>
@@ -300,6 +378,7 @@
         const MAX_RONDAS = 3;
         let colorObjetivo = null;
         const letras = "ABCDEFGHIJKLMNOP".split(""); // 16 letras para 16 filas
+        let tableroBloqueado = false;
 
         // Configuración del tablero (Estilo Hues and Clues: 30x16 = 480 colores)
         const columns = 30;
@@ -307,64 +386,72 @@
 
         const board = document.getElementById('game-board');
 
-
-
         function generateBoard() {
             const board = document.getElementById('game-board');
             board.innerHTML = '';
-            board.style.gridTemplateColumns = `repeat(31, 1fr)`;
+            board.style.gridTemplateColumns = `repeat(32, 1fr)`; // 1 (letra) + 30 (col) + 1 (letra)
 
-            // Fila 0: Números
-            const corner = document.createElement('div');
-            board.appendChild(corner);
+            // --- FILA SUPERIOR: Números ---
+            board.appendChild(document.createElement('div')); // Esquina superior izquierda
             for (let c = 1; c <= 30; c++) {
                 const numCell = document.createElement('div');
                 numCell.className = 'cell-label';
                 numCell.textContent = c;
                 board.appendChild(numCell);
             }
+            board.appendChild(document.createElement('div')); // Esquina superior derecha
 
-            // Centro del tablero para cálculos
+            // --- CUERPO DEL TABLERO: Letra + Colores + Letra ---
             const centerX = 14.5;
             const centerY = 7.5;
 
             for (let r = 0; r < rows; r++) {
-                const letterCell = document.createElement('div');
-                letterCell.className = 'letter-cell cell-label'; // Asegúrate de tener esta clase en CSS
-                letterCell.textContent = letras[r];
-                board.appendChild(letterCell);
+                // Letra IZQUIERDA
+                const letterLeft = document.createElement('div');
+                letterLeft.className = 'cell-label font-bold';
+                letterLeft.textContent = letras[r];
+                board.appendChild(letterLeft);
 
+                // Bloque de 30 colores
                 for (let c = 0; c < columns; c++) {
                     const cell = document.createElement('div');
 
+                    // Lógica de color HSL (se mantiene igual)
                     const dx = c - centerX;
                     const dy = r - centerY;
-
-                    // 1. Tono (Hue): Distribución radial
                     let h = (Math.atan2(dy, dx) * (180 / Math.PI)) + 90;
                     if (h < 0) h += 360;
-
-                    // 2. Distancia al centro (normalizada de 0 a 1)
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
                     const pctDist = dist / maxDist;
-
-                    // 3. Luminosidad (Lightness): Invertida
-                    // Centro (distancia 0) -> l = 85% (claro)
-                    // Bordes (distancia 1) -> l = 15% (oscuro)
                     const l = 85 - (pctDist * 70);
-
-                    // 4. Saturación: Más vibrante donde hay color (centro-medio)
                     const s = 90 - (pctDist * 30);
-
                     const color = `hsl(${h}, ${s}%, ${l}%)`;
 
                     cell.style.backgroundColor = color;
                     cell.className = 'aspect-square w-full cursor-pointer hover:scale-110 hover:z-10 transition-transform duration-100 rounded-sm shadow-sm';
+                    cell.dataset.fila = r;
+                    cell.dataset.columna = c;
                     cell.addEventListener('click', () => manejarClicCelda(r, c, cell));
                     board.appendChild(cell);
                 }
+
+                // Letra DERECHA [NUEVO]
+                const letterRight = document.createElement('div');
+                letterRight.className = 'cell-label font-bold';
+                letterRight.textContent = letras[r];
+                board.appendChild(letterRight);
             }
+
+            // --- FILA INFERIOR: Números [NUEVO] ---
+            board.appendChild(document.createElement('div')); // Esquina inferior izquierda
+            for (let c = 1; c <= 30; c++) {
+                const numCell = document.createElement('div');
+                numCell.className = 'cell-label';
+                numCell.textContent = c;
+                board.appendChild(numCell);
+            }
+            board.appendChild(document.createElement('div')); // Esquina inferior derecha
         }
         function highlightSelection(element) {
             // Quitar borde a otros
@@ -423,19 +510,26 @@
         ];
 
         document.getElementById('start-btn').addEventListener('click', () => {
-            const numPlayers = parseInt(document.getElementById('players-select').value);
+            /*const numPlayers = parseInt(document.getElementById('players-select').value);
             listaJugadores = Array.from({ length: numPlayers }, (_, i) => ({
                 id: i,
                 nombre: coloresJugadores[i].nombre,
                 color: coloresJugadores[i].hex,
                 puntos: 0
-            }));
+            }));*/
+
+            listaJugadores = [...jugadoresTemporales];
+
 
             document.getElementById('start-buttons').classList.add('hidden');
+            document.getElementById('game-layout').classList.remove('hidden');
             document.getElementById('game-stats').classList.remove('hidden');
+            document.getElementById('reset-game-btn').classList.remove('hidden');
 
             generateBoard();
             iniciarRonda();
+            actualizarProgresoNav();
+            guardarPartida()
         });
 
 
@@ -499,15 +593,16 @@
 
             const modalContent = document.querySelector('#guide-modal div');
             modalContent.innerHTML = `
-        <h2 class="text-2xl font-prisma text-acento mb-4">¡Color Registrado!</h2>
+        <h2 class="text-2xl font-prisma text-acento mb-4">¡Color Seleccionado!</h2>
         <div class="flex flex-col items-center py-4">
             <div class="w-24 h-24 rounded-full border-4 border-white mb-4" style="background-color: ${colorElegido.hsl}"></div>
             <p class="text-white mb-6">Has elegido <b>${colorElegido.coordenada}</b>.<br>Memorízalo bien.</p>
-            <button id="close-privacy-btn" class="w-full py-3 bg-acento text-gray-900 font-bold rounded-xl hover:bg-white transition">
+            <button id="close-privacy-btn" class="w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition duration-150 text-lg">
                 OCULTAR Y EMPEZAR
             </button>
         </div>
     `;
+            guardarPartida()
 
             document.getElementById('close-privacy-btn').onclick = () => {
                 guideModal.classList.add('hidden');
@@ -515,62 +610,62 @@
         }
 
         function revelarObjetivo() {
+            tableroBloqueado = true; // Bloqueamos clics al revelar
+
             const todasLasCeldas = document.querySelectorAll('#game-board > div');
 
-            // Función auxiliar para obtener la celda correcta ignorando las etiquetas
             const getCeldaReal = (f, c) => {
-                // Validamos que no se salga de los límites de los colores
                 if (f < 0 || f >= rows || c < 0 || c >= columns) return null;
-
-                // FÓRMULA: 
-                // (f + 1) -> Saltamos la fila de números superior
-                // * 31    -> Cada fila ahora tiene 31 elementos
-                // + (c + 1) -> Saltamos la celda de la letra a la izquierda
-                const indiceDOM = ((f + 1) * 31) + (c + 1);
+                // Ahora cada fila tiene 32 elementos. 
+                // (f + 1) salta la fila de números superior.
+                // (c + 1) salta la columna de letras de la izquierda.
+                const indiceDOM = ((f + 1) * 32) + (c + 1);
                 return todasLasCeldas[indiceDOM];
             };
 
-            // 1. Limpiar cualquier marca previa (opcional pero recomendado)
-            todasLasCeldas.forEach(el => {
-                el.style.outline = 'none';
-                el.style.border = 'none';
-                el.classList.remove('score-3', 'score-zone-2', 'score-zone-1');
-            });
-
-            // 2. Marcar el Centro (3 puntos)
+            // 1. Marcar el Centro (Estrella y brillo blanco)
             const centro = getCeldaReal(colorObjetivo.fila, colorObjetivo.columna);
             if (centro) {
                 centro.classList.add('score-3');
-                centro.animate([
-                    { transform: 'scale(1)', boxShadow: '0 0 0px white' },
-                    { transform: 'scale(1.3)', boxShadow: '0 0 15px white' }
-                ], { duration: 500, fill: 'forwards' });
+                centro.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white font-bold drop-shadow-md">⭐</div>';
+                centro.style.zIndex = "30";
             }
 
-            // 3. Dibujar los cuadros de puntuación (Zonas de 2 y 1 punto)
+            // 2. Dibujar zonas de puntuación (Bordes sutiles)
             for (let fOffset = -2; fOffset <= 2; fOffset++) {
                 for (let cOffset = -2; cOffset <= 2; cOffset++) {
                     const f = colorObjetivo.fila + fOffset;
                     const c = colorObjetivo.columna + cOffset;
                     const cell = getCeldaReal(f, c);
-
-                    if (cell) {
+                    if (cell && cell !== centro) {
                         const dist = Math.max(Math.abs(fOffset), Math.abs(cOffset));
-
-                        if (dist === 1) {
-                            // Cuadrado de 3x3 (2 puntos)
-                            cell.style.border = "2px solid rgba(255, 255, 255, 0.8)";
-                        } else if (dist === 2) {
-                            // Cuadrado de 5x5 (1 punto)
-                            cell.style.border = "1px dashed rgba(255, 255, 255, 0.5)";
-                        }
+                        if (dist === 1) cell.classList.add('score-zone-2');
+                        else if (dist === 2) cell.classList.add('score-zone-1');
                     }
                 }
             }
 
-            // Actualizar mensaje de interfaz
-            document.getElementById('turn-message').innerHTML =
-                `Color real: <b class="text-white">${colorObjetivo.coordenada}</b>`;
+            // 3. NUEVO: RESALTAR VOTOS DE LOS JUGADORES
+            // Buscamos todas las celdas donde alguien votó
+            document.querySelectorAll('#game-board div[data-votos]').forEach(el => {
+                const votos = JSON.parse(el.dataset.votos);
+
+                // Aplicamos un efecto de elevación y brillo extra
+                el.style.transition = "all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+                el.style.transform = "scale(1.2)"; // Hacemos la casilla más grande
+                el.style.zIndex = "40"; // Por encima de las líneas de puntuación
+
+                if (votos.length === 1) {
+                    const colorJugador = listaJugadores[votos[0]].color;
+                    el.style.boxShadow = `0 0 20px ${colorJugador}, inset 0 0 10px white`;
+                    el.style.outline = `3px solid white`;
+                    el.style.outlineOffset = "1px";
+                } else {
+                    // Si hay varios, intensificamos el anillo multicolor que ya tenía
+                    el.style.boxShadow = `0 0 25px rgba(255, 255, 255, 0.8)`;
+                    el.style.outline = `2px solid white`;
+                }
+            });
         }
 
         function iniciarRonda() {
@@ -579,6 +674,7 @@
 
             const guia = listaJugadores[indiceGuiaActual];
             actualizarMarcador();
+            actualizarProgresoNav();
 
             // ALERT DE PRIVACIDAD
             // Usamos setTimeout para asegurar que el marcador se actualice antes del alert
@@ -600,8 +696,6 @@
 
             if (votosRealizados === listaJugadores.length - 1) {
                 finalizarTurno();
-            } else {
-                document.getElementById('turn-message').textContent = `Votos: ${votosRealizados}/${listaJugadores.length - 1}. ¡Siguiente jugador!`;
             }
         }
 
@@ -618,41 +712,65 @@
             revelarObjetivo();
             actualizarMarcador();
 
-            // Mover botón de Siguiente Ronda al Nav-bar
-            const navActions = document.getElementById('nav-actions');
-            navActions.innerHTML = `
-        <button id="next-turn-btn" class="px-6 py-2 bg-white text-gray-900 rounded-full font-bold hover:bg-acento transition-all shadow-lg">
-            Siguiente Ronda →
-        </button>
-    `;
+            guardarPartida()
 
-            document.getElementById('next-turn-btn').onclick = () => {
-                navActions.innerHTML = '';
-                listaJugadores.forEach(j => delete j.votoActual);
-                prepararSiguienteTurno();
-            };
+            const actionButtons = document.getElementById('action-buttons');
+            if (actionButtons) {
+                actionButtons.innerHTML = `
+            <button id="next-turn-btn" class="
+                px-8 py-2.5 
+                bg-white text-gray-900 
+                rounded-full font-bold text-sm uppercase tracking-wider
+                hover:bg-acento hover:text-white
+                transition-all duration-300
+                shadow-lg shadow-white/10
+                flex items-center
+            ">
+                Continuar →
+            </button>
+        `;
+
+                document.getElementById('next-turn-btn').onclick = () => {
+                    actionButtons.innerHTML = '';
+                    listaJugadores.forEach(j => delete j.votoActual);
+                    prepararSiguienteTurno();
+                };
+            }
         }
 
         function prepararSiguienteTurno() {
-            // 1. Resetear votos en los datos
-            listaJugadores.forEach(j => {
-                delete j.votoActual;
+            // Limpieza visual profunda
+            document.querySelectorAll('#game-board div').forEach(el => {
+                el.style.transform = "none";
+                el.style.boxShadow = "none";
+                el.style.outline = "none";
+                el.style.zIndex = "1";
+                el.innerHTML = "";
             });
 
-            // 2. Resetear contadores
+
+
+            tableroBloqueado = false; // Desbloqueamos para la nueva ronda
+
+            guardarPartida()
+
+            listaJugadores.forEach(j => delete j.votoActual);
             votosRealizados = 0;
 
-            // 3. Generar nuevo tablero (esto limpia los dataset.votos del DOM)
-            generateBoard();
+            // Cambiar el guía para la siguiente ronda (opcional)
+            indiceGuiaActual = (indiceGuiaActual + 1) % listaJugadores.length;
 
-            // 4. Iniciar nueva ronda (cambio de guía, etc.)
+            generateBoard();
             iniciarRonda();
+            actualizarProgresoNav();
         }
 
         /**
         * Modifica tu función de clic en la celda para incluir esto:
         */
         function manejarClicCelda(fila, columna, elemento) {
+            // Si el tablero está bloqueado, ignoramos cualquier clic
+            if (tableroBloqueado) return;
             if (jugadorActualVotando === -1 || jugadorActualVotando === indiceGuiaActual) return;
 
             const jugadorActivo = listaJugadores[jugadorActualVotando];
@@ -680,6 +798,8 @@
             elemento.dataset.votos = JSON.stringify(votosNuevos);
             actualizarAparienciaCelda(elemento);
 
+            guardarPartida()
+
             // 3. Verificar si todos han votado al menos una vez
             const adivinadoresQueVotaron = listaJugadores.filter(j => j.votoActual && j.id !== indiceGuiaActual).length;
             const totalAdivinadores = listaJugadores.length - 1;
@@ -696,15 +816,27 @@
         }
 
         function mostrarBotonRevelar() {
-            const navActions = document.getElementById('nav-actions');
-            navActions.innerHTML = `
-        <button id="reveal-btn" class="px-6 py-2 bg-acento text-gray-900 rounded-full font-black hover:bg-white hover:scale-105 transition-all shadow-[0_0_15px_rgba(30,200,197,0.5)] animate-bounce">
-            REVELAR COLOR
+            const actionButtons = document.getElementById('action-buttons');
+            if (!actionButtons) return; // Seguridad
+
+            actionButtons.innerHTML = `
+        <button id="reveal-btn" class="
+            bg-gray-800 hover:bg-gray-700
+            text - white
+            px-8 py-2.5 
+            rounded-full font-black text-sm uppercase tracking-widest
+            transition-all duration-300
+            shadow-[0_0_20px_rgba(245,131,0,0.5)]
+            animate-pulse
+            cursor-pointer
+            flex items-center justify-center
+        ">
+            ✨ Revelar Objetivo ✨
         </button>
     `;
 
             document.getElementById('reveal-btn').onclick = () => {
-                navActions.innerHTML = ''; // Limpiar tras pulsar
+                actionButtons.innerHTML = '';
                 finalizarTurno();
             };
         }
@@ -730,6 +862,7 @@
             if (votos.length === 1) {
                 // UN SOLO JUGADOR: Borde sólido simple
                 const colorJugador = listaJugadores[votos[0]].color;
+                //const colorJugador = listaJugadores.find(j => j.id === votos[0])?.color;
                 elemento.style.border = `4px solid ${colorJugador}`;
                 elemento.style.boxShadow = `0 0 10px ${colorJugador}`;
             } else if (votos.length > 1) {
@@ -776,7 +909,6 @@
                     if (!esGuia) {
                         jugadorActualVotando = index;
                         actualizarMarcador();
-                        document.getElementById('turn-message').textContent = `Turno de: ${jugador.nombre}`;
                     }
                 };
 
@@ -793,7 +925,7 @@
                     ${esGuia ? '🎨' : '👤'}
                 </span>
                 <div class="flex items-center min-w-0">
-                    <span class="font-prisma text-xs text-white truncate">
+                    <span class="text-xs text-white truncate">
                         ${jugador.nombre} ${esSuTurno ? '⚡' : ''}
                     </span>
                     ${botonConsultar}
@@ -829,7 +961,7 @@
             <div class="w-24 h-24 rounded-full border-4 border-white mb-4 shadow-lg" style="background-color: ${colorObjetivo.hsl}"></div>
             <p class="text-white text-lg mb-2">Tu color es <b>${colorObjetivo.coordenada}</b></p>
             <p class="text-xs text-tarjeta mb-6">Memorízalo de nuevo y cierra esta ventana.</p>
-            <button id="close-reminder-btn" class="w-full py-3 bg-acento text-gray-900 font-bold rounded-xl hover:bg-white transition">
+            <button id="close-reminder-btn" class="w-full py-3 px-4 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition duration-150 text-lg">
                 CONTINUAR PARTIDA
             </button>
         </div>
@@ -842,6 +974,258 @@
             };
         }
 
+        function actualizarProgresoNav() {
+            const progressContainer = document.getElementById('game-progress');
+            const roundText = document.getElementById('round-count');
+            const guideText = document.getElementById('guide-count');
+
+            // Comprobamos que los elementos existan antes de actuar
+            if (progressContainer && roundText && guideText && listaJugadores.length > 0) {
+                progressContainer.classList.remove('hidden');
+                roundText.textContent = `${rondaActual}/${MAX_RONDAS}`;
+                const guiasCompletados = (indiceGuiaActual % listaJugadores.length) + 1;
+                guideText.textContent = `${guiasCompletados}/${listaJugadores.length}`;
+            }
+        }
+
+        function guardarPartida() {
+            const estado = {
+                listaJugadores,
+                indiceGuiaActual,
+                jugadorActualVotando,
+                votosRealizados,
+                rondaActual,
+                colorObjetivo,
+                tableroBloqueado
+            };
+            localStorage.setItem('prisma_game_state', JSON.stringify(estado));
+        }
+
+        function cargarPartida() {
+            const datosGuardados = localStorage.getItem('prisma_game_state');
+            if (datosGuardados) {
+                const estado = JSON.parse(datosGuardados);
+
+                // Restaurar variables globales
+                listaJugadores = estado.listaJugadores;
+                indiceGuiaActual = estado.indiceGuiaActual;
+                jugadorActualVotando = estado.jugadorActualVotando;
+                votosRealizados = estado.votosRealizados;
+                rondaActual = estado.rondaActual;
+                colorObjetivo = estado.colorObjetivo;
+                tableroBloqueado = estado.tableroBloqueado;
+
+                // Ajustar interfaz
+                document.getElementById('start-buttons').classList.add('hidden');
+                document.getElementById('game-layout').classList.remove('hidden');
+                document.getElementById('game-stats').classList.remove('hidden');
+                document.getElementById('reset-game-btn').classList.remove('hidden');
+
+                generateBoard();
+                actualizarMarcador();
+                actualizarProgresoNav();
+
+                // Si el tablero estaba bloqueado, significa que estábamos en pantalla de resultados
+                if (tableroBloqueado) {
+                    revelarObjetivo();
+                    finalizarTurno();
+                } else if (votosRealizados === listaJugadores.length - 1 && votosRealizados > 0) {
+                    mostrarBotonRevelar();
+                }
+
+                // Restaurar los votos visualmente en el tablero
+                listaJugadores.forEach(j => {
+                    if (j.votoActual) {
+                        const cell = document.querySelector(`div[data-fila="${j.votoActual.fila}"][data-columna="${j.votoActual.columna}"]`);
+                        if (cell) {
+                            let votos = cell.dataset.votos ? JSON.parse(cell.dataset.votos) : [];
+
+                            // Buscamos el índice real del jugador en la lista actual para que actualizarAparienciaCelda no falle
+                            const indiceReal = listaJugadores.findIndex(p => p.id === j.id);
+
+                            if (indiceReal !== -1 && !votos.includes(indiceReal)) {
+                                votos.push(indiceReal);
+                                cell.dataset.votos = JSON.stringify(votos);
+                                actualizarAparienciaCelda(cell);
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Llamar a cargarPartida justo al final del script para que se ejecute al abrir la web
+        cargarPartida();
+
+        document.getElementById('clear-storage-btn').addEventListener('click', () => {
+            if (confirm("¿Seguro que quieres borrar todo el progreso?")) {
+                localStorage.removeItem('prisma_game_state');
+                localStorage.removeItem('prisma_nombres_recientes');
+                location.reload(); // Recarga la página para volver al inicio
+            }
+        });
+
+        // También el botón de "Salir" del header
+        document.getElementById('reset-game-btn').onclick = () => {
+            if (confirm("¿Deseas abandonar la partida actual?")) {
+                localStorage.removeItem('prisma_game_state');
+                location.reload();
+            }
+        };
+
+
+        let jugadoresTemporales = [];
+
+        function actualizarVistaPreviaJugadores() {
+            const container = document.getElementById('players-list-display');
+            const startBtn = document.getElementById('start-btn');
+            container.innerHTML = '';
+
+            jugadoresTemporales.forEach((jugador, index) => {
+                const badge = document.createElement('div');
+                // El contenedor entero es el que se mueve
+                badge.draggable = true;
+                badge.className = 'flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-black transition-all duration-200 shadow-sm select-none';
+                badge.style.backgroundColor = jugador.color;
+                badge.style.color = '#0f172a';
+
+                badge.innerHTML = `
+            <span class="cursor-grab active:cursor-grabbing opacity-50 hover:opacity-100 px-1 text-lg drag-handle">⋮⋮</span>
+            
+            <span class="flex-1 py-1 cursor-pointer hover:underline name-zone px-1" draggable="false">${jugador.nombre}</span>
+            
+            <button class="opacity-40 hover:opacity-100 hover:text-white transition-opacity text-xl px-2 cursor-pointer delete-btn" 
+                    type="button" style="background:none; border:none; color:inherit; font-weight:bold;">×</button>
+        `;
+
+                const zonaNombre = badge.querySelector('.name-zone');
+                const btnEliminar = badge.querySelector('.delete-btn');
+
+                // --- 1. LÓGICA DE COLOR (Ahora funciona siempre) ---
+                zonaNombre.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    let colorIndex = coloresJugadores.findIndex(c => c.hex === jugador.color);
+                    colorIndex = (colorIndex + 1) % coloresJugadores.length;
+                    jugador.color = coloresJugadores[colorIndex].hex;
+
+                    // Actualización visual inmediata
+                    badge.style.backgroundColor = jugador.color;
+                    guardarNombresTemporales();
+                };
+
+                // --- 2. LÓGICA DE ELIMINAR ---
+                btnEliminar.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.eliminarJugadorTemporal(index);
+                };
+
+                // --- 3. LÓGICA DE ARRASTRE ---
+                badge.addEventListener('dragstart', (e) => {
+                    // Si el usuario pincha en el nombre o en el botón eliminar, CANCELAMOS el drag
+                    // para permitir que el evento 'onclick' del color funcione.
+                    if (e.target.classList.contains('name-zone') || e.target.closest('.delete-btn')) {
+                        e.preventDefault();
+                        return;
+                    }
+
+                    // Solo permitimos arrastrar si se agarra desde el badge o el handle
+                    e.dataTransfer.setData('text/plain', index);
+                    badge.style.opacity = '0.5';
+                });
+
+                badge.addEventListener('dragend', () => {
+                    badge.style.opacity = '1';
+                });
+
+                badge.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    badge.classList.add('scale-105', 'ring-2', 'ring-white/20');
+                });
+
+                badge.addEventListener('dragleave', () => {
+                    badge.classList.remove('scale-105', 'ring-2', 'ring-white/20');
+                });
+
+                badge.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    const fromIndex = e.dataTransfer.getData('text/plain');
+                    const toIndex = index;
+                    if (fromIndex !== "" && fromIndex !== toIndex.toString()) {
+                        const movedItem = jugadoresTemporales.splice(fromIndex, 1)[0];
+                        jugadoresTemporales.splice(toIndex, 0, movedItem);
+                        actualizarVistaPreviaJugadores();
+                        guardarNombresTemporales();
+                    }
+                });
+
+                container.appendChild(badge);
+            });
+
+            // Validación del botón de inicio
+            if (jugadoresTemporales.length >= 3 && jugadoresTemporales.length <= 10) {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function eliminarJugadorTemporal(index) {
+            jugadoresTemporales.splice(index, 1);
+            actualizarVistaPreviaJugadores();
+            guardarNombresTemporales();
+        }
+
+        window.eliminarJugadorTemporal = eliminarJugadorTemporal;
+
+        // Actualiza tu botón de añadir
+        document.getElementById('add-player-btn').onclick = () => {
+            const input = document.getElementById('player-name-input');
+            const nombre = input.value.trim();
+
+            if (nombre && jugadoresTemporales.length < 10) {
+                const colorAsignado = coloresJugadores[jugadoresTemporales.length % coloresJugadores.length].hex;
+
+                jugadoresTemporales.push({
+                    id: Date.now(), // Usamos timestamp para ID único
+                    nombre: nombre,
+                    color: colorAsignado,
+                    puntos: 0
+                });
+
+                input.value = '';
+                actualizarVistaPreviaJugadores();
+                guardarNombresTemporales(); // <--- GUARDAR AQUÍ
+            }
+        };
+
+        // Permitir añadir pulsando "Enter"
+        document.getElementById('player-name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('add-player-btn').click();
+        });
+
+        // Función auxiliar para persistir solo los nombres y colores elegidos
+        function guardarNombresTemporales() {
+            localStorage.setItem('prisma_nombres_recientes', JSON.stringify(jugadoresTemporales));
+        }
+
+        function cargarNombresRecientes() {
+            // Si NO hay una partida en curso, cargamos la lista previa
+            if (!localStorage.getItem('prisma_game_state')) {
+                const guardados = localStorage.getItem('prisma_nombres_recientes');
+                if (guardados) {
+                    jugadoresTemporales = JSON.parse(guardados);
+                    actualizarVistaPreviaJugadores();
+                }
+            }
+        }
+
+        // Ejecutar al cargar
+        cargarNombresRecientes();
 
     </script>
 
