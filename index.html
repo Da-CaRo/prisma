@@ -116,13 +116,16 @@
 
         /* Marco para 2 puntos (cuadrado 3x3) */
         .score-zone-2 {
-            border: 2px solid rgba(255, 255, 255, 0.9) !important;
+            /* Cambiamos border por outline para no chocar con el borde del jugador */
+            outline: 2px solid rgba(255, 255, 255, 0.8) !important;
+            outline-offset: -2px;
             z-index: 40;
         }
 
         /* Marco para 1 punto (cuadrado 5x5) */
         .score-zone-1 {
-            border: 1.5px dashed rgba(255, 255, 255, 0.6) !important;
+            outline: 1.5px dashed rgba(255, 255, 255, 0.5) !important;
+            outline-offset: -2px;
             z-index: 30;
         }
 
@@ -136,7 +139,6 @@
             pointer-events: none;
             /* Para que no se puedan clickar */
         }
-
 
 
         #control-bar-wrapper {
@@ -639,7 +641,12 @@
             const centro = getCeldaReal(colorObjetivo.fila, colorObjetivo.columna);
             if (centro) {
                 centro.classList.add('score-3');
-                centro.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white font-bold drop-shadow-md">⭐</div>';
+                // CAMBIO: Añadimos 'absolute' y 'text-[12px]' (o un tamaño menor al de la celda)
+                centro.innerHTML = `
+        <div class="absolute inset-0 flex items-center justify-center text-[14px] leading-none text-white font-bold drop-shadow-md">
+            ⭐
+        </div>`;
+                centro.style.position = 'relative'; // Asegura que el absolute funcione
                 centro.style.zIndex = "30";
             }
 
