@@ -543,9 +543,20 @@
             const contenedorOpciones = document.createElement('div');
             contenedorOpciones.className = 'grid grid-cols-2 gap-4 mb-6';
 
-            for (let i = 0; i < 4; i++) {
-                const r = Math.floor(Math.random() * rows);
-                const c = Math.floor(Math.random() * columns);
+
+            const cuadrantes = [
+                { cMin: 0, cMax: 14, rMin: 0, rMax: 7 },  // Sup. Izquierda (Col 1-15, Filas A-H)
+                { cMin: 15, cMax: 29, rMin: 0, rMax: 7 },  // Inf. Izquierda (Col 16-30, Filas A-H)
+                { cMin: 0, cMax: 14, rMin: 8, rMax: 15 }, // Sup. Derecha (Col 1-15, Filas I-P)
+                { cMin: 15, cMax: 29, rMin: 8, rMax: 15 }  // Inf. Derecha (Col 16-30, Filas I-P)
+            ];
+
+            cuadrantes.map((cuad, index) => {
+                // Generar fila (f) aleatoria entre fMin y fMax
+                const r = Math.floor(Math.random() * (cuad.rMax - cuad.rMin + 1)) + cuad.rMin;
+
+                // Generar columna (c) aleatoria entre cMin y cMax
+                const c = Math.floor(Math.random() * (cuad.cMax - cuad.cMin + 1)) + cuad.cMin;
 
                 // REPLICAR LÓGICA RADIAL (HSL)
                 const centerX = 14.5;
@@ -572,9 +583,10 @@
             <span class="text-xs font-bold text-white">${coordenada}</span>
         `;
 
-                btnOpción.onclick = () => confirmarSeleccionColor(opciones[i]);
+                btnOpción.onclick = () => confirmarSeleccionColor(opciones[index]);
                 contenedorOpciones.appendChild(btnOpción);
-            }
+            });
+
 
             // Actualizar el Modal
             const modalContent = document.querySelector('#guide-modal div');
